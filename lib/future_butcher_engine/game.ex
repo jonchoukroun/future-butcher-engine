@@ -8,9 +8,13 @@ defmodule FutureButcherEngine.Game do
     {:ok, %Game{turns_left: turns}}
   end
 
-  def end_turn(game) do
+  def end_turn(game, %{turns_left: turns_left}) when turns_left > 0 do
     {:ok, game
           |> decrement_turn()}
+  end
+
+  def end_turn(game, %{turns_left: turns_left}) do
+    {:ok, :game_over}
   end
 
   defp decrement_turn(game) do
