@@ -10,25 +10,25 @@ defmodule FutureButcherEngine.Station do
     {:ok, %Station{name: name, market: generate_market()}}
   end
 
-  def generate_market() do
+  defp generate_market() do
     Enum.map(@cuts, fn type -> generate_cut(type) end)
     |> Enum.reject(fn cut ->
         Map.values(cut) |> List.first |> Map.get(:price) == nil end)
   end
 
-  def generate_cut(type) do
+  defp generate_cut(type) do
     quantity = generate_quantity(type)
     %{type => %{quantity: quantity, price: get_price(quantity, type)}}
   end
 
-  def get_price(quantity, type) when quantity > 0 do
+  defp get_price(quantity, type) when quantity > 0 do
     {:ok, current_price} = Cut.new(type, quantity)
     current_price.price
   end
 
-  def get_price(_, type), do: nil
+  defp get_price(_, type), do: nil
 
-  def generate_quantity(type) do
+  defp generate_quantity(type) do
     Enum.random(0..max_quantities(type))
   end
 
