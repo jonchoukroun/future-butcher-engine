@@ -4,8 +4,7 @@ defmodule FutureButcherEngine.Cut do
   defstruct [:type, :price]
 
   def new(type, quantity) do
-    cut_values = %{type: type, price: calculate_price(type, quantity)}
-    {:ok, struct(Cut, cut_values)}
+    {:ok, %Cut{type: type, price: calculate_price(type, quantity)}}
   end
 
   defp calculate_price(type, quantity) do
