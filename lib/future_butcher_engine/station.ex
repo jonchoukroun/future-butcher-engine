@@ -1,13 +1,13 @@
 defmodule FutureButcherEngine.Station do
   alias FutureButcherEngine.{Cut, Station}
 
-  @enforce_keys [:name, :market]
-  defstruct [:name, :market]
+  @enforce_keys [:station_name, :market]
+  defstruct [:station_name, :market]
 
   @cuts [:flank, :heart, :liver, :loin, :ribs]
 
-  def new(name) do
-    {:ok, %Station{name: name, market: generate_market()}}
+  def new(station_name) do
+    {:ok, %Station{station_name: station_name, market: generate_market()}}
   end
 
   defp generate_market() do
