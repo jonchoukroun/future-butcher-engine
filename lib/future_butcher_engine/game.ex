@@ -5,15 +5,14 @@ defmodule FutureButcherEngine.Game do
   defstruct [:turns_left]
 
   def new(turns) do
-    {:ok, %Game{turns_left: turns}}
+    {:ok, %Game{turns_left: turns - 1}}
   end
 
-  def end_turn(game, %{turns_left: turns_left}) when turns_left > 0 do
-    {:ok, game
-          |> decrement_turn()}
+  def end_turn(%{turns_left: turns_left} = game) when turns_left > 0 do
+    {:ok, game |> decrement_turn()}
   end
 
-  def end_turn(game, %{turns_left: turns_left}) do
+  def end_turn(%{turns_left: turns_left} = game) do
     {:ok, :game_over}
   end
 
