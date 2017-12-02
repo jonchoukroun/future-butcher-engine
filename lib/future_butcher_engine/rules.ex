@@ -17,6 +17,10 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :at_subway}}
   end
 
+  def check(%Rules{state: :in_game} = rules, :end_game) do
+    {:ok, %Rules{rules | state: :game_end}}
+  end
+
   def check(%Rules{state: :at_market} = rules, :buy_cut) do
     {:ok, %Rules{rules | state: :at_market}}
   end
