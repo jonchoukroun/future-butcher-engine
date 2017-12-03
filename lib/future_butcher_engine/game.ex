@@ -17,8 +17,7 @@ defmodule FutureButcherEngine.Game do
   end
 
   defp decrement_turn(game) do
-    game
-    |> Map.put(:turns_left, Map.get(game, :turns_left) - 1)
+    game |> Map.put(:turns_left, Map.get(game, :turns_left) - 1)
   end
 
 end
