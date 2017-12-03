@@ -23,6 +23,15 @@ defmodule FutureButcherEngine.Player do
     {:ok, player |> decrease_health(amount)}
   end
 
+  def adjust_health(%Player{health: health} = player, amount, :heal) when
+    amount + health > 100 do
+    {:ok, player |> increase_health(100 - health)}
+  end
+
+  def adjust_health(%Player{health: health} = player, amount, :heal) do
+    {:ok, player |> increase_health(amount)}
+  end
+
   def adjust_funds(%Player{funds: funds} = player, amount, :buy) when
     amount > funds do
     {:error, :insufficient_funds}
@@ -38,6 +47,10 @@ defmodule FutureButcherEngine.Player do
 
   defp decrease_health(player, amount) do
     player |> Map.put(:health, Map.get(player, :health) - amount)
+  end
+
+  defp increase_health(player, amount) do
+    player |> Map.put(:health, Map.get(player, :health) + amount)
   end
 
   defp decrease_funds(player, amount) do
