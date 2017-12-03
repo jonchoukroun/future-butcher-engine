@@ -1,17 +1,37 @@
 defmodule FutureButcherEngine.Player do
   alias __MODULE__
 
-  @enforce_keys [:player_name, :health, :cash, :debt]
-  defstruct [:player_name, :health, :cash, :debt]
+  @enforce_keys [:player_name, :health, :funds, :debt]
+  defstruct [:player_name, :health, :funds, :debt]
 
   @health_range 1..100
 
-  def new(health, cash) when health in (@health_range) and cash > 0 do
-    {:ok, %Player{player_name: nil, health: health, cash: cash, debt: cash}}
+  def new(health, funds) when health in (@health_range) and funds > 0 do
+    {:ok, %Player{player_name: nil, health: health, funds: funds, debt: funds}}
   end
 
-  def new(_health, _cash) do
+  def new(_health, _funds) do
     {:error, :invalid_player_values}
+  end
+
+  def adjust_funds(%Player{funds: funds} = player, amount, :buy) when amount > funds do
+    {:error, :insufficient_funds}
+  end
+
+  def adjust_funds(%{funds: funds} = player, amount, :buy) do
+    {:ok, player |> decrease_funds(amount) }
+  end
+
+  def adjust_funds(%{funds: funds} = player, amount, :sell) do
+    {:ok , player |> increase_funds(amount)}
+  end
+
+  defp decrease_funds(player, amount) do
+    player |> Map.put(:funds, Map.get(player, :funds) - amount)
+  end
+
+  defp increase_funds(player, amount) do
+    player |> Map.put(:funds, Map.get(player, :funds) + amount)
   end
 
 end
