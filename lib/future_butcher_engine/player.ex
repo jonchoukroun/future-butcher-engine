@@ -14,7 +14,17 @@ defmodule FutureButcherEngine.Player do
     {:error, :invalid_player_values}
   end
 
-  def adjust_funds(%Player{funds: funds} = player, amount, :buy) when amount > funds do
+  def adjust_health(%Player{health: health}, amount, :hurt) when
+    amount > health do
+      {:ok, :player_dead}
+  end
+
+  def adjust_health(%Player{health: health} = player, amount, :hurt) do
+    {:ok, player |> decrease_health(amount)}
+  end
+
+  def adjust_funds(%Player{funds: funds} = player, amount, :buy) when
+    amount > funds do
     {:error, :insufficient_funds}
   end
 
@@ -24,6 +34,10 @@ defmodule FutureButcherEngine.Player do
 
   def adjust_funds(%{funds: funds} = player, amount, :sell) do
     {:ok , player |> increase_funds(amount)}
+  end
+
+  defp decrease_health(player, amount) do
+    player |> Map.put(:health, Map.get(player, :health) - amount)
   end
 
   defp decrease_funds(player, amount) do
