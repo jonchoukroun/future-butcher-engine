@@ -1,9 +1,14 @@
 defmodule FutureButcherEngine.Rules do
   alias __MODULE__
 
-  defstruct state: :initialized
+  defstruct state: :initialized,
+            player: :alive
 
   def new, do: %Rules{}
+
+  def check(%Rules{player: :dead} = rules, _action) do
+    {:ok, %Rules{rules | state: :game_end}}
+  end
 
   def check(%Rules{state: :initialized} = rules, :start_game) do
     {:ok, %Rules{rules | state: :in_game}}
@@ -42,4 +47,5 @@ defmodule FutureButcherEngine.Rules do
   end
 
   def check(_state, _action), do: :error
+
 end
