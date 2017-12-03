@@ -1,5 +1,5 @@
 defmodule FutureButcherEngine.Station do
-  alias FutureButcherEngine.{Cut, Station}
+  alias FutureButcherEngine.{Cut, Player, Station}
 
   @enforce_keys [:station_name, :market]
   defstruct [:station_name, :market]
