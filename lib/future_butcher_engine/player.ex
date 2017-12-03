@@ -4,9 +4,9 @@ defmodule FutureButcherEngine.Player do
   @enforce_keys [:player_name, :health, :funds, :debt]
   defstruct [:player_name, :health, :funds, :debt]
 
-  @health_range 1..100
+  @max_health 100
 
-  def new(health, funds) when health in (@health_range) and funds > 0 do
+  def new(health, funds) when health <= @max_health and funds > 0 do
     {:ok, %Player{player_name: nil, health: health, funds: funds, debt: funds}}
   end
 
@@ -24,8 +24,8 @@ defmodule FutureButcherEngine.Player do
   end
 
   def adjust_health(%Player{health: health} = player, amount, :heal) when
-    amount + health > 100 do
-    {:ok, player |> increase_health(100 - health)}
+    amount + health > @max_health do
+    {:ok, player |> increase_health(@max_health - health)}
   end
 
   def adjust_health(%Player{health: health} = player, amount, :heal) do
