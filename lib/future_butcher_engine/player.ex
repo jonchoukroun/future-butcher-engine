@@ -1,23 +1,27 @@
 defmodule FutureButcherEngine.Player do
   alias __MODULE__
 
-  @enforce_keys [:player_name, :health, :funds, :debt]
-  defstruct [
-    :player_name, :health, :funds, :debt, :flank, :heart, :loin, :liver, :ribs
-  ]
+  @enforce_keys [:player_name, :health, :funds, :debt, :pack]
+  defstruct [:player_name, :health, :funds, :debt, :pack]
 
   @max_health 100
+  @cut_keys [:flank, :heart, :loin, :liver, :ribs]
 
   def new(health, funds) when health <= @max_health and funds > 0 do
     {:ok, %Player{
-     health: health, funds: funds, debt: funds,
-     flank: nil, heart: nil, loin: nil, liver: nil, ribs: nil,
-     player_name: nil
+      player_name: nil, health: health, funds: funds, debt: funds,
+      pack: initialize_pack()
      }}
   end
 
   def new(_health, _funds) do
     {:error, :invalid_player_values}
+  end
+
+  def adjust_pack(%{pack: pack} = player, cut, amount, :buy) do
+    # below needs to be fixed to find matching cut as passed in and return map
+    Enum.find(pack, fn el -> Map.get(el, cut) = cut end)
+    {:ok, :something}
   end
 
   def adjust_funds(%Player{funds: funds} = player, amount, :buy) when
@@ -49,6 +53,10 @@ defmodule FutureButcherEngine.Player do
 
   def adjust_health(%Player{health: health} = player, amount, :hurt) do
     {:ok, player |> decrease_attribute(amount, :health)}
+  end
+
+  defp initialize_pack do
+    Enum.map(@cut_keys, fn cut -> %{cut => nil} end)
   end
 
   defp increase_attribute(player, amount, attribute) do
