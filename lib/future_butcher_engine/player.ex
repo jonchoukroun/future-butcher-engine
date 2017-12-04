@@ -18,6 +18,7 @@ defmodule FutureButcherEngine.Player do
   end
 
   def adjust_pack(%Player{pack: pack}, cut, amount, :buy) do
+    pack = increase_cut(pack, cut, amount)
     {:ok, pack[cut]}
   end
 
@@ -54,6 +55,10 @@ defmodule FutureButcherEngine.Player do
 
   defp initialize_pack do
     Map.new(@cut_keys, fn cut -> {cut, nil} end)
+  end
+
+  defp increase_cut(pack, cut, amount) do
+    pack |> Map.put(cut, Map.get(pack, cut) + amount)
   end
 
   defp increase_attribute(player, amount, attribute) do
