@@ -11,16 +11,15 @@ defmodule FutureButcherEngine.Player do
     {:ok, %Player{
       player_name: nil, health: health, funds: funds, debt: funds,
       pack: initialize_pack()
-     }}
+      }}
   end
 
   def new(_health, _funds) do
     {:error, :invalid_player_values}
   end
 
-  def adjust_pack(%{pack: pack} = player, cut, amount, :buy) do
+  def adjust_pack(%Player{pack: pack} = player, cut, amount, :buy) do
     # below needs to be fixed to find matching cut as passed in and return map
-    Enum.find(pack, fn el -> Map.get(el, cut) = cut end)
     {:ok, :something}
   end
 
@@ -29,11 +28,11 @@ defmodule FutureButcherEngine.Player do
     {:error, :insufficient_funds}
   end
 
-  def adjust_funds(%{funds: funds} = player, amount, :buy) do
+  def adjust_funds(%Player{funds: funds} = player, amount, :buy) do
     {:ok, player |> decrease_attribute(amount, :funds) }
   end
 
-  def adjust_funds(%{funds: funds} = player, amount, :sell) do
+  def adjust_funds(%Player{funds: funds} = player, amount, :sell) do
     {:ok , player |> increase_attribute(amount, :funds)}
   end
 
@@ -56,7 +55,7 @@ defmodule FutureButcherEngine.Player do
   end
 
   defp initialize_pack do
-    Enum.map(@cut_keys, fn cut -> %{cut => nil} end)
+    Map.new(@cut_keys, fn cut -> {cut, nil} end)
   end
 
   defp increase_attribute(player, amount, attribute) do
