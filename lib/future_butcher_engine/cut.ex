@@ -4,8 +4,6 @@ defmodule FutureButcherEngine.Cut do
   defstruct [:type, :price]
 
   def new(type, quantity) do
-    # {:ok, %Cut{type: type, price: calculate_price(type, quantity)}}
-
     case calculate_price(type, quantity) do
       {:error, msg} ->
         {:error, msg}
@@ -28,5 +26,10 @@ defmodule FutureButcherEngine.Cut do
   defp cut_values(:liver, quantity) when quantity <= 100, do: {-0.55, 65}
   defp cut_values(:loin, quantity) when quantity <= 45, do: {-17.0, 1300}
   defp cut_values(:ribs, quantity) when quantity <= 30, do: {-83.0, 3500}
-  defp cut_values(_, quantity), do: {:error, "#{quantity} exceeds cut maximum"}
+  defp cut_values(cut, quantity) do
+    msg = "exceeds #{cut} maximum"
+    |> String.replace(" ", "_")
+    |> String.to_atom
+    {:error, msg}
+  end
 end
