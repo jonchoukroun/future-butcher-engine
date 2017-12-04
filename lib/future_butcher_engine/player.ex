@@ -10,17 +10,15 @@ defmodule FutureButcherEngine.Player do
   def new(health, funds) when health <= @max_health and funds > 0 do
     {:ok, %Player{
       player_name: nil, health: health, funds: funds, debt: funds,
-      pack: initialize_pack()
-      }}
+      pack: initialize_pack()}}
   end
 
   def new(_health, _funds) do
     {:error, :invalid_player_values}
   end
 
-  def adjust_pack(%Player{pack: pack} = player, cut, amount, :buy) do
-    # below needs to be fixed to find matching cut as passed in and return map
-    {:ok, :something}
+  def adjust_pack(%Player{pack: pack}, cut, amount, :buy) do
+    {:ok, pack[cut]}
   end
 
   def adjust_funds(%Player{funds: funds} = player, amount, :buy) when
