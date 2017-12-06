@@ -32,4 +32,10 @@ defmodule FutureButcherEngine.PlayerTest do
     {:ok, player} = Player.new(100, 1000)
     assert Player.adjust_health(player, 200, :hurt) == {:ok, :player_dead}
   end
+
+  test "Healing player by more than max health returns max health" do
+    {:ok, player} = Player.new(50, 1000)
+    {:ok, player} = Player.adjust_health(player, 100, :heal)
+    assert player.health == 100
+  end
 end
