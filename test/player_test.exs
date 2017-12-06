@@ -27,4 +27,9 @@ defmodule FutureButcherEngine.PlayerTest do
     {:ok, player} = Player.adjust_funds(player, 100, :sell)
     assert player.funds == 1100
   end
+
+  test "Hurting player by more than current health results in death" do
+    {:ok, player} = Player.new(100, 1000)
+    assert Player.adjust_health(player, 200, :hurt) == {:ok, :player_dead}
+  end
 end
