@@ -15,4 +15,16 @@ defmodule FutureButcherEngine.PlayerTest do
     assert Player.adjust_funds(player, 1001, :buy) == {
       :error, :insufficient_funds}
   end
+
+  test "Buying with sufficient funds returns expected values" do
+    {:ok, player} = Player.new(100, 1000)
+    {:ok, player} = Player.adjust_funds(player, 100, :buy)
+    assert player.funds == 900
+  end
+
+  test "Selling returns expected values" do
+    {:ok, player} = Player.new(100, 1000)
+    {:ok, player} = Player.adjust_funds(player, 100, :sell)
+    assert player.funds == 1100
+  end
 end
