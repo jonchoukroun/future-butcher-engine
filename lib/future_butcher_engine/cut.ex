@@ -27,8 +27,7 @@ defmodule FutureButcherEngine.Cut do
   defp cut_values(:loin, quantity) when quantity <= 45, do: {-17.0, 1300}
   defp cut_values(:ribs, quantity) when quantity <= 30, do: {-83.0, 3500}
   defp cut_values(cut, quantity) do
-    msg = "exceeds #{cut} maximum"
-    |> String.replace(" ", "_")
+    msg = "exceeds_#{cut}_maximum"
     |> String.to_atom
     {:error, msg}
   end
