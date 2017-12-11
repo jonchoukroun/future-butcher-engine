@@ -10,7 +10,11 @@ defmodule CutTest do
     assert Cut.new(:flank, 100) == {:error, :exceeds_flank_maximum}
   end
 
-  # test "Cute.new/2 with invalid cut type returns error" do
-  #   assert Cut.new(:blarg, 40) == {:error, :invalid_cut_type}
-  # end
+  test "Cut.new/2 with invalid cut type returns error" do
+    assert Cut.new(:blarg, 40) == {:error, :invalid_cut_type}
+  end
+
+  test "Cut.new/2 with single arg returns error" do
+    assert Cut.new(:loin) == {:error, :missing_inputs}
+  end
 end
