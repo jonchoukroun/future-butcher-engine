@@ -18,7 +18,7 @@ defmodule FutureButcherEngine.RulesTest do
 
   test "Start game action only moves to in game state from initialized" do
     rules = Rules.new()
-    assert Rules.check(rules, :visit_market) == {:error, :invalid_action}
+    assert Rules.check(rules, :visit_market) == :error
     {:ok, rules} = Rules.check(rules, :start_game)
     assert rules.state == :in_game
   end
