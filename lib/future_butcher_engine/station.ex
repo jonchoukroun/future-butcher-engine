@@ -5,10 +5,13 @@ defmodule FutureButcherEngine.Station do
   defstruct [:station_name, :market]
 
   @cuts [:flank, :heart, :liver, :loin, :ribs]
+  @stations [:downtown, :venice_beach, :koreatown, :culver_city, :silverlake]
 
-  def new(station_name) do
-    {:ok, %Station{station_name: station_name, market: generate_market()}}
+  def new(station) when station in @stations do
+    {:ok, %Station{station_name: station, market: generate_market()}}
   end
+
+  def new(_), do: {:error, :invalid_station}
 
   defp generate_market() do
     Enum.map(@cuts, fn type -> generate_cut(type) end)
