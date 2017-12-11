@@ -4,7 +4,7 @@ defmodule FutureButcherEngine.Game do
   @enforce_keys [:turns_left, :state]
   defstruct [:turns_left, :state]
 
-  def new(turns) when is_integer(turns) do
+  def new(turns) when is_integer(turns) and turns > 0 do
     %Game{turns_left: turns, state: :initialized}
   end
 
