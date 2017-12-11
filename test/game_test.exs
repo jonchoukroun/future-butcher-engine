@@ -2,28 +2,30 @@ defmodule FutureButcherEngine.GameTest do
   use ExUnit.Case
   alias FutureButcherEngine.Game
 
-  @turns 30
-
-  test "Game.new/1 with valid turns arg creates game struct" do
-    assert Game.new(@turns) == {:ok, %Game{turns_left: 29}}
+  test "Passing non integer or less than 1 to new game returns error" do
+    assert Game.new("10") == {:error, :invalid_turns}
+    assert Game.new(nil)  == {:error, :invalid_turns}
+    assert Game.new(0)    == {:error, :invalid_turns}
   end
 
-  test "Game.new/1 with turn over max returns error" do
-    assert Game.new(@turns + 1) == {:error, :exceeds_max_turns}
+  test "No events change game over state" do
+    game = Game.new(4)
+    game = %Game{game | state: :game_over}
+    assert Game.check(game, :any_action) == {:error, :game_over}
   end
 
-  test "Game.new/1 with invalid turns arg returns error" do
-    assert Game.new('turn') == {:error, :invalid_turns_number}
+  test "Change station event returns in game state and decrements turns left" do
+    game = Game.new(5)
+    game = %Game{game | state: :at_subway}
+    {:ok, game} = Game.check(game, :change_station)
+    assert game.state == :in_game
+    assert game.turns_left == 4
   end
 
-  test "Game.end_turn/1 with no turns left returns game over" do
-    {:ok, game} = Game.new(1)
-    assert Game.end_turn(game) == {:ok, :game_over}
-  end
-
-  test "Game.end_turn/1 with turns left succeeds and returns struct" do
-    {:ok, game} = Game.new(@turns)
-    assert Game.end_turn(game) == {:ok, %Game{turns_left: 28}}
+  test "Failure to pass valid state or action returns generic error" do
+    game = Game.new(1)
+    assert Game.check(game, :bullshit_action) == :error
+    assert Game.check(5, :visit_subway)       == :error
   end
 
 end
