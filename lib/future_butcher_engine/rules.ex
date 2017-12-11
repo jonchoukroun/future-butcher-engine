@@ -7,7 +7,7 @@ defmodule FutureButcherEngine.Rules do
   def new, do: %Rules{}
 
   def check(%Rules{player: :dead} = rules, _action) do
-    {:ok, %Rules{rules | state: :game_end}}
+    {:ok, %Rules{rules | state: :game_over}}
   end
 
   def check(%Rules{state: :initialized} = rules, :start_game) do
@@ -23,7 +23,7 @@ defmodule FutureButcherEngine.Rules do
   end
 
   def check(%Rules{state: :in_game} = rules, :end_game) do
-    {:ok, %Rules{rules | state: :game_end}}
+    {:ok, %Rules{rules | state: :game_over}}
   end
 
   def check(%Rules{state: :at_market} = rules, :buy_cut) do
