@@ -8,9 +8,9 @@ defmodule FutureButcherEngine.Player do
   @cut_keys [:flank, :heart, :loin, :liver, :ribs]
 
   def new(health, funds) when health <= @max_health and funds > 0 do
-    {:ok, %Player{
+    %Player{
       player_name: nil, health: health, funds: funds, debt: funds,
-      pack: initialize_pack()}}
+      pack: initialize_pack()}
   end
 
   def new(_health, _funds) do
