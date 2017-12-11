@@ -13,7 +13,7 @@ defmodule FutureButcherEngine.RulesTest do
     rules = %Rules{rules | player: :dead}
     assert rules.player == :dead
     {:ok, rules} = Rules.check(rules, :visit_subway)
-    assert rules.state == :game_end
+    assert rules.state == :game_over
   end
 
   test "Start game action only moves to in game state from initialized" do
@@ -21,6 +21,18 @@ defmodule FutureButcherEngine.RulesTest do
     assert Rules.check(rules, :visit_market) == :error
     {:ok, rules} = Rules.check(rules, :start_game)
     assert rules.state == :in_game
+  end
+
+  test "Visit market, subway, or end game are only valid actions in game" do
+    rules = Rules.new()
+    rules = %Rules{rules | state: :in_game}
+
+    refute Rules.check(rules, :visit_market) == :error
+    refute Rules.check(rules, :visit_subway) == :error
+    refute Rules.check(rules, :end_game)     == :error
+
+    assert Rules.check(rules, :buy_cut) == :error
+    assert Rules.check(rules, :leave_market) == :error
   end
 
 end
