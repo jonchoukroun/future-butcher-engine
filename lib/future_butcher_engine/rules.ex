@@ -1,5 +1,5 @@
 defmodule FutureButcherEngine.Rules do
-  alias __MODULE__
+  alias FutureButcherEngine.{Game, Rules}
 
   defstruct state: :initialized,
             player: :alive
