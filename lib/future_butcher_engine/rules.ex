@@ -46,6 +46,6 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
-  def check(_state, _action), do: :error
+  def check(_state, _action), do: {:error, :invalid_action}
 
 end
