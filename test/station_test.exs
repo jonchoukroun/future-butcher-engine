@@ -11,4 +11,5 @@ defmodule FutureButcherEngine.StationTest do
     assert station.station_name == :downtown
     assert is_list(station.market)
   end
+
 end
