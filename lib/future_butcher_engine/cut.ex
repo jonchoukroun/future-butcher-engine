@@ -3,32 +3,37 @@ defmodule FutureButcherEngine.Cut do
 
   defstruct [:type, :price]
 
-  def new(type, quantity) do
-    case calculate_price(type, quantity) do
-      {:error, msg} ->
+  @cut_values %{
+    :flank => %{:max => 20,  :slope => -450.0,  :max_price => 14_000},
+    :heart => %{:max => 10,  :slope => -1000.0, :max_price => 25_000},
+    :liver => %{:max => 100, :slope => -0.55,   :max_price => 65},
+    :loin  => %{:max => 45,  :slope => -17.0,   :max_price => 1300},
+    :ribs  => %{:max => 40,  :slope => -83.0,   :max_price => 3500}
+  }
+
+  @cuts_list Map.keys(@cut_values)
+
+  def new(type, quantity) when type in @cuts_list do
+    case valid_quantity?(type, quantity) do
+      true ->
+        {:ok, %Cut{type: type, price: calculate_price(type, quantity)}}
+      false ->
+        msg = "exceeds_#{type}_maximum"
+        |> String.to_atom
         {:error, msg}
-      cut_price ->
-        {:ok, %Cut{type: type, price: cut_price}}
     end
   end
+
+  def new(_type, quantity), do: {:error, :invalid_cut_type}
+
+  def new(_), do: {:error, :missing_inputs}
 
   defp calculate_price(type, quantity) do
-    case cut_values(type, quantity) do
-      {:error, msg} ->
-        {:error, msg}
-      {slope, max_price} ->
-        round((slope * quantity) + max_price)
-    end
+    slope     = @cut_values[type][:slope]
+    max_price = @cut_values[type][:max_price]
+    round((slope * quantity) + max_price)
   end
 
-  defp cut_values(:flank, quantity) when quantity <= 20, do: {-450.0, 14_000}
-  defp cut_values(:heart, quantity) when quantity <= 10, do: {-1000.0, 25_000}
-  defp cut_values(:liver, quantity) when quantity <= 100, do: {-0.55, 65}
-  defp cut_values(:loin, quantity) when quantity <= 45, do: {-17.0, 1300}
-  defp cut_values(:ribs, quantity) when quantity <= 30, do: {-83.0, 3500}
-  defp cut_values(cut, quantity) do
-    msg = "exceeds_#{cut}_maximum"
-    |> String.to_atom
-    {:error, msg}
-  end
+  defp valid_quantity?(type, quantity), do: quantity <= @cut_values[type][:max]
+
 end
