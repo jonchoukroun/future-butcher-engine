@@ -8,7 +8,7 @@ defmodule FutureButcherEngine.Station do
   @stations [:downtown, :venice_beach, :koreatown, :culver_city, :silverlake]
 
   def new(station) when station in @stations do
-    {:ok, %Station{station_name: station, market: generate_market()}}
+    %Station{station_name: station, market: generate_market()}
   end
 
   def new(_), do: {:error, :invalid_station}

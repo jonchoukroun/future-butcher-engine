@@ -7,7 +7,7 @@ defmodule FutureButcherEngine.StationTest do
   end
 
   test "Valid station name creates station with market quantities and values" do
-    {:ok, station} = Station.new(:downtown)
+    station = Station.new(:downtown)
     assert station.station_name == :downtown
     assert is_list(station.market)
   end
