@@ -22,8 +22,16 @@ defmodule FutureButcherEngine.Player do
     {:ok, pack[cut]}
   end
 
-  def adjust_funds(%Player{funds: funds} = player, amount, :buy) when
-    amount > funds do
+  def repay_debt(%Player{funds: funds, debt: debt} = player)
+  when funds >= debt do
+    {:ok, player} = adjust_funds(player, debt, :buy)
+    {:ok, player |> decrease_attribute(debt, :debt)}
+  end
+
+  def repay_debt(%Player{}), do: {:error, :insufficient_funds}
+
+  def adjust_funds(%Player{funds: funds} = player, amount, :buy)
+  when amount > funds do
     {:error, :insufficient_funds}
   end
 
@@ -35,8 +43,8 @@ defmodule FutureButcherEngine.Player do
     {:ok , player |> increase_attribute(amount, :funds)}
   end
 
-  def adjust_health(%Player{health: health} = player, amount, :heal) when
-    amount + health > @max_health do
+  def adjust_health(%Player{health: health} = player, amount, :heal)
+  when amount + health > @max_health do
     {:ok, player |> increase_attribute((@max_health - health), :health)}
   end
 
@@ -44,8 +52,8 @@ defmodule FutureButcherEngine.Player do
     {:ok, player |> increase_attribute(amount, :health)}
   end
 
-  def adjust_health(%Player{health: health}, amount, :hurt) when
-    amount > health do
+  def adjust_health(%Player{health: health}, amount, :hurt)
+  when amount > health do
       {:ok, :player_dead}
   end
 
