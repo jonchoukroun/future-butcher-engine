@@ -28,6 +28,24 @@ defmodule FutureButcherEngine.PlayerTest do
     assert player.funds == 1100
   end
 
+  test "Repaying debt when less than funds clears debts and reduces funds" do
+    player = Player.new(100, 1000)
+    {:ok, player} = Player.adjust_funds(player, 1000, :sell)
+    assert player.funds > player.debt
+
+    {:ok, player} = Player.repay_debt(player)
+    assert player.debt == 0
+    assert player.funds == 1000
+  end
+
+  test "Repaying debt when more than funds returns error" do
+    player = Player.new(100, 1000)
+    refute player.funds > player.debt
+    {:ok, player} = Player.adjust_funds(player, 100, :buy)
+
+    assert Player.repay_debt(player) == {:error, :insufficient_funds}
+  end
+
   test "Hurting player by more than current health results in death" do
     player = Player.new(100, 1000)
     assert Player.adjust_health(player, 200, :hurt) == {:ok, :player_dead}
