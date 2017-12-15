@@ -51,7 +51,7 @@ defmodule FutureButcherEngine.Player do
 
   def adjust_funds(%Player{funds: funds} = player, amount, :decrease)
   when amount > funds do
-    {:ok, player |> Map.put(funds, 0)}
+    {:ok, player |> Map.put(:funds, 0)}
   end
 
   def adjust_funds(player, amount, :decrease) do
