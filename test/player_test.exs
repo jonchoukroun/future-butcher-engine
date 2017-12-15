@@ -61,34 +61,34 @@ defmodule FutureButcherEngine.PlayerTest do
     assert player.funds == 1000
   end
 
-  # test "Repaying debt when more than funds returns error" do
-  #   player = Player.new(100, 1000)
-  #   refute player.funds > player.debt
-  #   {:ok, player} = Player.adjust_funds(player, 100, :buy)
+  test "Repaying debt when more than funds returns error" do
+    player = Player.new(100, 1000)
+    refute player.funds > player.debt
+    {:ok, player} = Player.adjust_funds(player, 100, :decrease)
 
-  #   assert Player.repay_debt(player) == {:error, :insufficient_funds}
-  # end
+    assert Player.repay_debt(player) == {:error, :insufficient_funds}
+  end
 
-  # test "Hurting player by more than current health results in death" do
-  #   player = Player.new(100, 1000)
-  #   assert Player.adjust_health(player, 200, :hurt) == {:ok, :player_dead}
-  # end
+  test "Hurting player by more than current health results in death" do
+    player = Player.new(100, 1000)
+    assert Player.adjust_health(player, 200, :hurt) == {:ok, :player_dead}
+  end
 
-  # test "Healing player by more than max health returns max health" do
-  #   player = Player.new(50, 1000)
-  #   {:ok, player} = Player.adjust_health(player, 100, :heal)
-  #   assert player.health == 100
-  # end
+  test "Healing player by more than max health returns max health" do
+    player = Player.new(50, 1000)
+    {:ok, player} = Player.adjust_health(player, 100, :heal)
+    assert player.health == 100
+  end
 
-  # test "Hurting player decreases health by expected amount" do
-  #   player = Player.new(100, 1000)
-  #   {:ok, player} = Player.adjust_health(player, 20, :hurt)
-  #   assert player.health == 80
-  # end
+  test "Hurting player decreases health by expected amount" do
+    player = Player.new(100, 1000)
+    {:ok, player} = Player.adjust_health(player, 20, :hurt)
+    assert player.health == 80
+  end
 
-  # test "Healing player increases health by expected amount" do
-  #   player = Player.new(40, 1000)
-  #   {:ok, player} = Player.adjust_health(player, 20, :heal)
-  #   assert player.health == 60
-  # end
+  test "Healing player increases health by expected amount" do
+    player = Player.new(40, 1000)
+    {:ok, player} = Player.adjust_health(player, 20, :heal)
+    assert player.health == 60
+  end
 end
