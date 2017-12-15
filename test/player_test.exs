@@ -26,6 +26,13 @@ defmodule FutureButcherEngine.PlayerTest do
       :error, :insufficient_pack_space}
   end
 
+  test "Valid purchase increases owned cut and decreases funds" do
+    player = Player.new(100, 1000)
+    {:ok, player} = Player.adjust_pack(player, :loin, 5, 100, :buy)
+    assert Map.get(player.pack, :loin) == 5
+    assert player.funds == 500
+  end
+
   # test "Repaying debt when less than funds clears debts and reduces funds" do
   #   player = Player.new(100, 1000)
   #   {:ok, player} = Player.adjust_funds(player, 1000, :sell)
