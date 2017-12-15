@@ -49,9 +49,9 @@ defmodule FutureButcherEngine.Player do
 
   def repay_debt(_), do: {:error, :insufficient_funds}
 
-  def adjust_funds(%Player{funds: funds}, amount, :decrease)
+  def adjust_funds(%Player{funds: funds} = player, amount, :decrease)
   when amount > funds do
-    {:error, :insufficient_funds}
+    {:ok, player |> Map.put(funds, 0)}
   end
 
   def adjust_funds(player, amount, :decrease) do
