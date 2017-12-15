@@ -18,11 +18,11 @@ defmodule FutureButcherEngine.Player do
     {:error, :invalid_player_values}
   end
 
-  def adjust_pack(%Player{pack: pack} = player, cut, amount, price, :buy) do
+  def adjust_pack(player, cut, amount, price, :buy) do
     with {:ok, cost} <- sufficient_funds?(player, amount, price),
          {:ok}       <- sufficient_space?(player, amount)
      do
-      {:ok, player} = adjust_funds(player, (amount * price), :decrease)
+      {:ok, player} = adjust_funds(player, cost, :decrease)
       {:ok, player |> Map.replace(:pack, increase_cut(
         player.pack, cut, amount))}
     else
@@ -30,9 +30,15 @@ defmodule FutureButcherEngine.Player do
     end
   end
 
-  def adjust_pack(%Player{pack: pack} = player, cut, amount, price, :sell) do
-    {:ok, player} = adjust_funds(player, (amount * price), :increase)
-    {:ok, player |> Map.replace(:pack, decrease_cut(player.pack, cut, amount))}
+  def adjust_pack(player, cut, amount, price, :sell) do
+    with {:ok} <- sufficient_cuts?(player.pack, cut, amount)
+    do
+      {:ok, player} = adjust_funds(player, (amount * price), :increase)
+      {:ok, player |> Map.replace(:pack, decrease_cut(
+        player.pack, cut, amount))}
+    else
+      {:error, msg} -> {:error, msg}
+    end
   end
 
   def repay_debt(%Player{funds: funds, debt: debt} = player)
@@ -41,18 +47,18 @@ defmodule FutureButcherEngine.Player do
     {:ok, player |> decrease_attribute(debt, :debt)}
   end
 
-  def repay_debt(%Player{}), do: {:error, :insufficient_funds}
+  def repay_debt(_), do: {:error, :insufficient_funds}
 
-  def adjust_funds(%Player{funds: funds} = player, amount, :decrease)
+  def adjust_funds(%Player{funds: funds}, amount, :decrease)
   when amount > funds do
     {:error, :insufficient_funds}
   end
 
-  def adjust_funds(%Player{funds: funds} = player, amount, :decrease) do
+  def adjust_funds(player, amount, :decrease) do
     {:ok, player |> decrease_attribute(amount, :funds) }
   end
 
-  def adjust_funds(%Player{funds: funds} = player, amount, :increase) do
+  def adjust_funds(player, amount, :increase) do
     {:ok , player |> increase_attribute(amount, :funds)}
   end
 
@@ -61,7 +67,7 @@ defmodule FutureButcherEngine.Player do
     {:ok, player |> increase_attribute((@max_health - health), :health)}
   end
 
-  def adjust_health(%Player{health: health} = player, amount, :heal) do
+  def adjust_health(player, amount, :heal) do
     {:ok, player |> increase_attribute(amount, :health)}
   end
 
@@ -70,7 +76,7 @@ defmodule FutureButcherEngine.Player do
       {:ok, :player_dead}
   end
 
-  def adjust_health(%Player{health: health} = player, amount, :hurt) do
+  def adjust_health(player, amount, :hurt) do
     {:ok, player |> decrease_attribute(amount, :health)}
   end
 
@@ -91,10 +97,18 @@ defmodule FutureButcherEngine.Player do
     |> Map.values
     |> Enum.reduce(0, fn(x, acc) -> x + acc end)
 
-    if space_taken + amount < @max_space do
+    if space_taken + amount <= @max_space do
       {:ok}
     else
       {:error, :insufficient_pack_space}
+    end
+  end
+
+  defp sufficient_cuts?(pack, cut, amount) do
+    if Map.get(pack, cut) >= amount do
+      {:ok}
+    else
+      {:error, :insufficent_cuts}
     end
   end
 
