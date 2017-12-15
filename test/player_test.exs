@@ -33,10 +33,16 @@ defmodule FutureButcherEngine.PlayerTest do
     assert player.funds == 500
   end
 
-  test "Decrease fund by more than available zeroes out funds" do
+  test "Decreasing fund by more than available zeroes out funds" do
     player = Player.new(100, 1000)
     {:ok, player} = Player.adjust_funds(player, 2000, :decrease)
     assert player.funds == 0
+  end
+
+  test "Decreasing funds by less than available reduces funds" do
+    player = Player.new(100, 1000)
+    {:ok, player} = Player.adjust_funds(player, 500, :decrease)
+    assert player.funds == 500
   end
 
   # test "Repaying debt when less than funds clears debts and reduces funds" do
