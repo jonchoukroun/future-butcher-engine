@@ -12,23 +12,23 @@ defmodule FutureButcherEngine.PlayerTest do
 
   test "Buying with insufficient funds returns error" do
     player = Player.new(100, 1000)
-    assert Player.adjust_pack(player, :ribs, 20, 1000, :buy) == {
+    assert Player.buy_cut(player, :ribs, 20, 1000) == {
       :error, :insufficient_funds}
   end
 
   test "Buying with insufficient space returns error" do
     player = Player.new(100, 1000)
-    assert Player.adjust_pack(player, :ribs, 100, 1, :buy) == {
+    assert Player.buy_cut(player, :ribs, 100, 1) == {
       :error, :insufficient_pack_space}
 
-    {:ok, player} = Player.adjust_pack(player, :ribs, 10, 10, :buy)
-    assert Player.adjust_pack(player, :ribs, 11, 10, :buy) == {
+    {:ok, player} = Player.buy_cut(player, :ribs, 10, 10)
+    assert Player.buy_cut(player, :ribs, 11, 10) == {
       :error, :insufficient_pack_space}
   end
 
   test "Valid purchase increases owned cut and decreases funds" do
     player = Player.new(100, 1000)
-    {:ok, player} = Player.adjust_pack(player, :loin, 5, 100, :buy)
+    {:ok, player} = Player.buy_cut(player, :loin, 5, 100)
     assert Map.get(player.pack, :loin) == 5
     assert player.funds == 500
   end
