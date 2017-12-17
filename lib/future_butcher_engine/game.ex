@@ -28,6 +28,10 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, :visit_market)
   end
 
+  def leave_market(game) do
+    GenServer.call(game, :leave_market)
+  end
+
   def handle_call(:start_game, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :start_game)
     do
@@ -42,6 +46,17 @@ defmodule FutureButcherEngine.Game do
 
   def handle_call(:visit_market, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :visit_market)
+    do
+      state_data
+      |> update_rules(rules)
+      |> reply_success(:ok)
+    else
+      :error -> {:reply, :error, state_data}
+    end
+  end
+
+  def handle_call(:leave_market, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :leave_market)
     do
       state_data
       |> update_rules(rules)
