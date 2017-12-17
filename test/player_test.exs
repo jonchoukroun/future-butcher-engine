@@ -40,6 +40,14 @@ defmodule FutureButcherEngine.PlayerTest do
     assert Player.sell_cut(player, :flank, 3, 10)
   end
 
+  test "Valid sale decreases owned cut and increases funds" do
+    player = Player.new(100, 1000)
+    {:ok, player} = Player.buy_cut(player, :flank, 5, 10)
+    {:ok, player} = Player.sell_cut(player, :flank, 3, 20)
+    assert Map.get(player.pack, :flank) == 2
+    assert player.funds == 1010
+  end
+
   test "Decreasing fund by more than available zeroes out funds" do
     player = Player.new(100, 1000)
     {:ok, player} = Player.adjust_funds(player, 2000, :decrease)
