@@ -33,6 +33,13 @@ defmodule FutureButcherEngine.PlayerTest do
     assert player.funds == 500
   end
 
+  test "Selling more cuts than owned returns error" do
+    player = Player.new(100, 1000)
+    {:ok, player} = Player.buy_cut(player, :heart, 5, 10)
+    assert Player.sell_cut(player, :heart, 6, 10)
+    assert Player.sell_cut(player, :flank, 3, 10)
+  end
+
   test "Decreasing fund by more than available zeroes out funds" do
     player = Player.new(100, 1000)
     {:ok, player} = Player.adjust_funds(player, 2000, :decrease)
