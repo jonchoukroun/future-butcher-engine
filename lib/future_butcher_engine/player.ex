@@ -18,7 +18,7 @@ defmodule FutureButcherEngine.Player do
     {:error, :invalid_player_values}
   end
 
-  def adjust_pack(player, cut, amount, price, :buy) do
+  def buy_cut(player, cut, amount, price) do
     with {:ok, cost} <- sufficient_funds?(player, amount, price),
          {:ok}       <- sufficient_space?(player, amount)
      do
@@ -30,7 +30,7 @@ defmodule FutureButcherEngine.Player do
     end
   end
 
-  def adjust_pack(player, cut, amount, price, :sell) do
+  def sell_cut(player, cut, amount, price) do
     with {:ok} <- sufficient_cuts?(player.pack, cut, amount)
     do
       {:ok, player} = adjust_funds(player, (amount * price), :increase)
