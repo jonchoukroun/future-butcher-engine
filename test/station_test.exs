@@ -9,7 +9,9 @@ defmodule FutureButcherEngine.StationTest do
   test "Valid station name creates station with market quantities and values" do
     station = Station.new(:downtown)
     assert station.station_name == :downtown
-    assert is_list(station.market)
+    assert is_map(station.market)
+    assert Map.keys(station.market.flank) == [:price, :quantity]
+    assert station.market |> Map.keys() |> Enum.count() == 5
   end
 
 end
