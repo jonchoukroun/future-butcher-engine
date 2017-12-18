@@ -14,14 +14,12 @@ defmodule FutureButcherEngine.Station do
   def new(_), do: {:error, :invalid_station}
 
   defp generate_market() do
-    Enum.map(@cuts, fn type -> generate_cut(type) end)
-    |> Enum.reject(fn cut ->
-        Map.values(cut) |> List.first |> Map.get(:price) == nil end)
+    Map.new(@cuts, fn type -> {type, generate_cut(type)} end)
   end
 
-  defp generate_cut(type) do
+  def generate_cut(type) do
     quantity = generate_quantity(type)
-    %{type => %{quantity: quantity, price: get_price(quantity, type)}}
+    %{quantity: quantity, price: get_price(quantity, type)}
   end
 
   defp get_price(quantity, type) when quantity > 0 do
