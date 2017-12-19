@@ -30,7 +30,7 @@ defmodule FutureButcherEngine.Game do
       state_data
       |> update_rules(rules)
       |> travel_to(:downtown)
-      |> reply_success(:ok)
+      |> reply_success({:ok, :game_started})
     else
       {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
@@ -45,7 +45,7 @@ defmodule FutureButcherEngine.Game do
     do
       state_data
       |> update_rules(rules)
-      |> reply_success(:ok)
+      |> reply_success({:ok, :visiting_market})
     else
       {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
@@ -60,7 +60,7 @@ defmodule FutureButcherEngine.Game do
     do
       state_data
       |> update_rules(rules)
-      |> reply_success(:ok)
+      |> reply_success({:ok, :left_market})
     else
       {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
@@ -80,15 +80,27 @@ defmodule FutureButcherEngine.Game do
       |> update_market(cut, amount, :buy)
       |> update_player(player)
       |> update_rules(rules)
-      |> reply_success(:ok)
+      |> reply_success(
+        {:ok, String.to_atom("#{amount}_#{cut}_bought_for_#{cost}")})
     else
       {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
   end
 
-  def sell_cut(game, cut, amount) do
-    GenServer.call(game, {:sell_cut, cut, amount})
-  end
+  # def sell_cut(game, cut, amount) do
+  #   GenServer.call(game, {:sell_cut, cut, amount})
+  # end
+
+  # def handle_call({:sell_cut, cut, amount}, _from, state_data) do
+  #   with {:ok, rules} <- Rules.check(state_data.rules, :sell_cut)
+  #   do
+  #     state_data
+  #     |> update_rules(rules)
+  #     |> reply_success(:ok)
+  #   else
+  #     {:error, msg} -> {:reply, {:error, msg}, state_data}
+  #   end
+  # end
 
   defp get_cost(market, cut, amount) do
     {:ok, Map.get(market, cut).price * amount}
