@@ -86,6 +86,10 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
+  def sell_cut(game, cut, amount) do
+    GenServer.call(game, {:sell_cut, cut, amount})
+  end
+
   defp get_cost(market, cut, amount) do
     {:ok, Map.get(market, cut).price * amount}
   end
