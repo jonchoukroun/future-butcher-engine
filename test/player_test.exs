@@ -12,7 +12,7 @@ defmodule FutureButcherEngine.PlayerTest do
 
   test "Buying with insufficient funds returns error" do
     player = Player.new(100, 1000)
-    assert Player.buy_cut(player, :ribs, 20, 1000) == {
+    assert Player.buy_cut(player, :ribs, 20, 1300) == {
       :error, :insufficient_funds}
   end
 
@@ -30,7 +30,7 @@ defmodule FutureButcherEngine.PlayerTest do
     player = Player.new(100, 1000)
     {:ok, player} = Player.buy_cut(player, :loin, 5, 100)
     assert Map.get(player.pack, :loin) == 5
-    assert player.funds == 500
+    assert player.funds == 900
   end
 
   test "Selling more cuts than owned returns error" do
