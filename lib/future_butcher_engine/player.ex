@@ -18,24 +18,24 @@ defmodule FutureButcherEngine.Player do
     {:error, :invalid_player_values}
   end
 
-  def buy_cut(player, cut, amount, price) do
-    with {:ok, cost} <- sufficient_funds?(player, amount, price),
-         {:ok}       <- sufficient_space?(player, amount)
+  def buy_cut(player, cut, amount, cost) do
+    with {:ok} <- sufficient_funds?(player, cost),
+         {:ok} <- sufficient_space?(player, amount)
      do
       {:ok, player} = adjust_funds(player, cost, :decrease)
-      {:ok, player |> Map.replace(:pack, increase_cut(
-        player.pack, cut, amount))}
+      {:ok, player
+            |> Map.replace(:pack, increase_cut(player.pack, cut, amount))}
     else
       {:error, msg} -> {:error, msg}
     end
   end
 
-  def sell_cut(player, cut, amount, price) do
+  def sell_cut(player, cut, amount, profit) do
     with {:ok} <- sufficient_cuts?(player.pack, cut, amount)
     do
-      {:ok, player} = adjust_funds(player, (amount * price), :increase)
-      {:ok, player |> Map.replace(:pack, decrease_cut(
-        player.pack, cut, amount))}
+      {:ok, player} = adjust_funds(player, profit, :increase)
+      {:ok, player
+            |> Map.replace(:pack, decrease_cut(player.pack, cut, amount))}
     else
       {:error, msg} -> {:error, msg}
     end
@@ -84,12 +84,8 @@ defmodule FutureButcherEngine.Player do
     Map.new(@cut_keys, fn cut -> {cut, 0} end)
   end
 
-  defp sufficient_funds?(player, amount, price) do
-    if player.funds >= (amount * price) do
-      {:ok, (amount * price)}
-    else
-      {:error, :insufficient_funds}
-    end
+  defp sufficient_funds?(player, cost) do
+    if (player.funds >= cost), do: {:ok}, else: {:error, :insufficient_funds}
   end
 
   defp sufficient_space?(player, amount) do
