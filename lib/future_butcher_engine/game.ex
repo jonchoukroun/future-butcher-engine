@@ -32,7 +32,7 @@ defmodule FutureButcherEngine.Game do
       |> travel_to(:downtown)
       |> reply_success(:ok)
     else
-      :error -> {:reply, :error, state_data}
+      {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
   end
 
@@ -47,7 +47,7 @@ defmodule FutureButcherEngine.Game do
       |> update_rules(rules)
       |> reply_success(:ok)
     else
-      :error -> {:reply, :error, state_data}
+      {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
   end
 
@@ -62,7 +62,7 @@ defmodule FutureButcherEngine.Game do
       |> update_rules(rules)
       |> reply_success(:ok)
     else
-      :error -> {:reply, :error, state_data}
+      {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
   end
 
@@ -71,31 +71,27 @@ defmodule FutureButcherEngine.Game do
   end
 
   def handle_call({:buy_cut, cut, amount}, _from, state_data) do
-    with {:ok, rules}  <- Rules.check(state_data.rules, :buy_cut),
-         {:ok, price}  <- get_price(state_data.station.market, cut, amount),
-         {:ok, player} <- Player.buy_cut(state_data.player, cut, amount, price)
+    with  {:ok, rules} <- Rules.check(state_data.rules, :buy_cut),
+                 {:ok} <- valid_amount?(state_data.station.market, cut, amount),
+           {:ok, cost} <- get_cost(state_data.station.market, cut, amount),
+         {:ok, player} <- Player.buy_cut(state_data.player, cut, amount, cost)
     do
       state_data
       |> update_market(cut, amount, :buy)
-      # |> update_player(player)
-      # |> update_rules(rules)
+      |> update_player(player)
+      |> update_rules(rules)
       |> reply_success(:ok)
     else
-      :error -> {:reply, :error, state_data}
+      {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
   end
 
-  defp get_price(market, cut, amount) do
-    case valid_amount?(market, cut, amount) do
-      {:ok} ->
-        {:ok, Map.get(market, cut).price * amount}
-      {:error, msg} ->
-        {:error, msg}
-    end
+  defp get_cost(market, cut, amount) do
+    {:ok, Map.get(market, cut).price * amount}
   end
 
   defp valid_amount?(market, cut, amount) do
-    if Map.get(market, cut).quantity > amount do
+    if Map.get(market, cut).quantity >= amount do
       {:ok}
     else
       {:error, :invalid_amount}
