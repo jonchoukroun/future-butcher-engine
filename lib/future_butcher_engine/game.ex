@@ -66,14 +66,14 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def buy_cut(game, cut, amount) do
+  def buy_cut(game, cut, amount) when amount > 0 do
     GenServer.call(game, {:buy_cut, cut, amount})
   end
 
   def handle_call({:buy_cut, cut, amount}, _from, state_data) do
     with  {:ok, rules} <- Rules.check(state_data.rules, :buy_cut),
                  {:ok} <- valid_amount?(state_data.station.market, cut, amount),
-           {:ok, cost} <- get_cost(state_data.station.market, cut, amount),
+           {:ok, cost} <- get_price(state_data.station.market, cut, amount),
          {:ok, player} <- Player.buy_cut(state_data.player, cut, amount, cost)
     do
       state_data
@@ -87,27 +87,45 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  # def sell_cut(game, cut, amount) do
-  #   GenServer.call(game, {:sell_cut, cut, amount})
-  # end
+  def sell_cut(game, cut, amount) when amount > 0 do
+    GenServer.call(game, {:sell_cut, cut, amount})
+  end
 
-  # def handle_call({:sell_cut, cut, amount}, _from, state_data) do
-  #   with {:ok, rules} <- Rules.check(state_data.rules, :sell_cut)
-  #   do
-  #     state_data
-  #     |> update_rules(rules)
-  #     |> reply_success(:ok)
-  #   else
-  #     {:error, msg} -> {:reply, {:error, msg}, state_data}
-  #   end
-  # end
+  def handle_call({:sell_cut, cut, amount}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :sell_cut),
+                {:ok} <- cuts_owned?(state_data.player.pack, cut, amount),
+        {:ok, profit} <- get_price(state_data.station.market, cut, amount),
+        {:ok, player} <- Player.sell_cut(state_data.player, cut, amount, profit)
+    do
+      state_data
+      |> update_market(cut, amount, :sell)
+      |> update_player(player)
+      |> update_rules(rules)
+      |> reply_success(
+        {:ok, String.to_atom("#{amount}_#{cut}_sold_for_#{profit}")})
+    else
+      {:error, msg} -> {:reply, {:error, msg}, state_data}
+    end
+  end
 
-  defp get_cost(market, cut, amount) do
-    {:ok, Map.get(market, cut).price * amount}
+  def get_price(market, cut, amount) do
+    if Map.get(market, cut) do
+      {:ok, Map.get(market, cut).price * amount}
+    else
+      {:error, :not_for_sale}
+    end
   end
 
   defp valid_amount?(market, cut, amount) do
     if Map.get(market, cut).quantity >= amount do
+      {:ok}
+    else
+      {:error, :invalid_amount}
+    end
+  end
+
+  defp cuts_owned?(pack, cut, amount) do
+    if Map.get(pack, cut) >= amount do
       {:ok}
     else
       {:error, :invalid_amount}
