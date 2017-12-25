@@ -24,8 +24,9 @@ defmodule FutureButcherEngine.RulesTest do
 
   test "Failure to pass valid state or action returns generic error" do
     rules = Rules.new(1)
-    assert Rules.check(rules, :bullshit_action) == :error
-    assert Rules.check(5, :visit_subway)       == :error
+    assert Rules.check(rules, :bullshit_action) == {
+      :error, :violates_current_rules}
+    assert Rules.check(5, :visit_subway) == {:error, :violates_current_rules}
   end
 
 end

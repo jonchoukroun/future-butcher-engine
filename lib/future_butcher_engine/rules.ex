@@ -67,7 +67,7 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
-  def check(_state, _action), do: :error
+  def check(_state, _action), do: {:error, :violates_current_rules}
 
   defp decrement_turn(rules) do
     rules |> Map.put(:turns_left, Map.get(rules, :turns_left) - 1)
