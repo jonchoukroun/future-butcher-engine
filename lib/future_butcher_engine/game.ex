@@ -117,6 +117,29 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
+  def handle_call(:visit_subway, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :visit_subway)
+    do
+      state_data
+      |> update_rules(rules)
+      |> reply_success({:ok, :visit_subway})
+    else
+      {:error, msg} -> {:reply, {:error, msg}, state_data}
+    end
+  end
+
+  def handle_call(:leave_subway, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :leave_subway)
+    do
+      state_data
+      |> update_rules(rules)
+      |> reply_success({:ok, :left_subway})
+    else
+      {:error, msg} -> {:reply, {:error, msg}, state_data}
+    end
+  end
+
+
   defp get_price(market, cut, amount) do
     if Map.get(market, cut) do
       {:ok, Map.get(market, cut).price * amount}
