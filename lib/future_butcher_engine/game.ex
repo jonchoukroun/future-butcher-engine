@@ -5,6 +5,8 @@ defmodule FutureButcherEngine.Game do
   @enforce_keys [:player, :rules]
   defstruct [:player, :rules]
 
+  @stations [:downtown, :venice_beach, :koreatown, :culver_city, :silverlake]
+
   def start_link(turns, health, funds)
   when is_integer(turns)
   when is_integer(health)
@@ -46,6 +48,10 @@ defmodule FutureButcherEngine.Game do
 
   def leave_subway(game) do
     GenServer.call(game, :leave_subway)
+  end
+
+  def change_station(game, destination) do
+    GenServer.call(game, {:change_station, destination})
   end
 
 
@@ -139,20 +145,40 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-
-  defp get_price(market, cut, amount) do
-    if Map.get(market, cut) do
-      {:ok, Map.get(market, cut).price * amount}
+  def handle_call({:change_station, destination}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :change_station),
+                {:ok} <- valid_destination?(destination)
+    do
+      state_data
+      |> update_rules(rules)
+      |> travel_to(destination)
+      |> reply_success(
+        {:ok, String.to_atom("traveled_to_#{Atom.to_string(destination)}")})
     else
-      {:error, :not_for_sale}
+      {:game_over, rules} ->
+        state_data |> update_rules(rules) |> end_game()
+      {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
   end
+
 
   defp valid_amount?(market, cut, amount) do
     if Map.get(market, cut).quantity >= amount do
       {:ok}
     else
       {:error, :invalid_amount}
+    end
+  end
+
+  defp valid_destination?(destination) when destination in @stations, do: {:ok}
+
+  defp valid_destination?(_), do: {:error, :invalid_station}
+
+  defp get_price(market, cut, amount) do
+    if Map.get(market, cut) do
+      {:ok, Map.get(market, cut).price * amount}
+    else
+      {:error, :not_for_sale}
     end
   end
 
@@ -185,5 +211,7 @@ defmodule FutureButcherEngine.Game do
   end
 
   defp reply_success(state_data, reply), do: {:reply, reply, state_data}
+
+  defp end_game(state_data), do: {:reply, :game_over, state_data}
 
 end
