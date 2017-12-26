@@ -24,6 +24,31 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, :start_game)
   end
 
+  def visit_market(game) do
+    GenServer.call(game, :visit_market)
+  end
+
+  def leave_market(game) do
+    GenServer.call(game, :leave_market)
+  end
+
+  def buy_cut(game, cut, amount) when amount > 0 do
+    GenServer.call(game, {:buy_cut, cut, amount})
+  end
+
+  def sell_cut(game, cut, amount) when amount > 0 do
+    GenServer.call(game, {:sell_cut, cut, amount})
+  end
+
+  def visit_subway(game) do
+    GenServer.call(game, :visit_subway)
+  end
+
+  def leave_subway(game) do
+    GenServer.call(game, :leave_subway)
+  end
+
+
   def handle_call(:start_game, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :start_game)
     do
@@ -34,10 +59,6 @@ defmodule FutureButcherEngine.Game do
     else
       {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
-  end
-
-  def visit_market(game) do
-    GenServer.call(game, :visit_market)
   end
 
   def handle_call(:visit_market, _from, state_data) do
@@ -51,10 +72,6 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def leave_market(game) do
-    GenServer.call(game, :leave_market)
-  end
-
   def handle_call(:leave_market, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :leave_market)
     do
@@ -64,10 +81,6 @@ defmodule FutureButcherEngine.Game do
     else
       {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
-  end
-
-  def buy_cut(game, cut, amount) when amount > 0 do
-    GenServer.call(game, {:buy_cut, cut, amount})
   end
 
   def handle_call({:buy_cut, cut, amount}, _from, state_data) do
@@ -87,10 +100,6 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def sell_cut(game, cut, amount) when amount > 0 do
-    GenServer.call(game, {:sell_cut, cut, amount})
-  end
-
   def handle_call({:sell_cut, cut, amount}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :sell_cut),
                 {:ok} <- cuts_owned?(state_data.player.pack, cut, amount),
@@ -108,7 +117,7 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def get_price(market, cut, amount) do
+  defp get_price(market, cut, amount) do
     if Map.get(market, cut) do
       {:ok, Map.get(market, cut).price * amount}
     else
