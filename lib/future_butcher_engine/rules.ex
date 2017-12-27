@@ -29,10 +29,6 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :at_subway}}
   end
 
-  def check(%Rules{state: :in_game} = rules, :visit_loanshark) do
-    {:ok, %Rules{rules | state: :at_loanshark}}
-  end
-
   def check(%Rules{state: :in_game} = rules, :end_game) do
     {:ok, %Rules{rules | state: :game_over}}
   end
@@ -50,10 +46,6 @@ defmodule FutureButcherEngine.Rules do
   end
 
   def check(%Rules{state: :at_subway} = rules, :leave_subway) do
-    {:ok, %Rules{rules | state: :in_game}}
-  end
-
-  def check(%Rules{state: :at_loanshark} = rules, :repay_debt) do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
