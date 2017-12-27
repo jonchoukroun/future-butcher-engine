@@ -15,6 +15,8 @@ defmodule FutureButcherEngine.Game do
     GenServer.start_link(__MODULE__, game_rules, [])
   end
 
+  # Client functions
+
   def init(game_rules) do
     {:ok, %{
       rules: Rules.new(game_rules.turns),
@@ -54,6 +56,8 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, {:change_station, destination})
   end
 
+
+  # GenServer callbacks
 
   def handle_call(:start_game, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :start_game)
@@ -162,6 +166,8 @@ defmodule FutureButcherEngine.Game do
   end
 
 
+  # Validations
+
   defp valid_amount?(market, cut, amount) do
     if Map.get(market, cut).quantity >= amount do
       {:ok}
@@ -174,14 +180,6 @@ defmodule FutureButcherEngine.Game do
 
   defp valid_destination?(_), do: {:error, :invalid_station}
 
-  defp get_price(market, cut, amount) do
-    if Map.get(market, cut) do
-      {:ok, Map.get(market, cut).price * amount}
-    else
-      {:error, :not_for_sale}
-    end
-  end
-
   defp cuts_owned?(pack, cut, amount) do
     if Map.get(pack, cut) >= amount do
       {:ok}
@@ -190,16 +188,30 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  defp update_market(state_data, cut, amount, transaction_type) do
-    amount = if (transaction_type == :buy), do: amount * -1, else: amount
 
-    put_in(state_data, access_cut_value(cut, :quantity),
-      Map.get(state_data.station.market, cut).quantity + amount)
+  # Computations
+
+  defp get_price(market, cut, amount) do
+    if Map.get(market, cut) do
+      {:ok, Map.get(market, cut).price * amount}
+    else
+      {:error, :not_for_sale}
+    end
   end
 
   defp access_cut_value(cut, k)
   when k in [:price, :quantity] do
     [Access.key(:station), Access.key(:market), Access.key(cut), Access.key(k)]
+  end
+
+
+  # Updates
+
+  defp update_market(state_data, cut, amount, transaction_type) do
+    amount = if (transaction_type == :buy), do: amount * -1, else: amount
+
+    put_in(state_data, access_cut_value(cut, :quantity),
+      Map.get(state_data.station.market, cut).quantity + amount)
   end
 
   defp update_player(state_data, player), do: %{state_data | player: player}
@@ -209,6 +221,9 @@ defmodule FutureButcherEngine.Game do
   defp travel_to(state_data, station) do
     %{state_data | station: Station.new(station)}
   end
+
+
+  # Replies
 
   defp reply_success(state_data, reply), do: {:reply, reply, state_data}
 
