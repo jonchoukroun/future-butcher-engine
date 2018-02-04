@@ -7,13 +7,13 @@ defmodule FutureButcherEngine.Game do
 
   @stations [:downtown, :venice_beach, :koreatown, :culver_city, :silverlake]
 
-  def start_link(player_name, turns, health, funds)
-  when is_binary(player_name)
-  when is_integer(turns)
-  when is_integer(health)
-  when is_integer(funds) do
+  @turns 10
+  @health 100
+  @funds 5000
+
+  def start_link(player_name) when is_binary(player_name) do
     game_rules = %{
-      player_name: player_name, turns: turns, health: health, funds: funds}
+      player_name: player_name, turns: @turns, health: @health, funds: @funds}
 
     GenServer.start_link(__MODULE__, game_rules, name: via_tuple(player_name))
   end
