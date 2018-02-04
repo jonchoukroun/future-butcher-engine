@@ -1,5 +1,5 @@
 defmodule FutureButcherEngine.Game do
-  use GenServer
+  use GenServer, start: { __MODULE__, :start_link, [] }, restart: :transient
   alias FutureButcherEngine.{Player, Station, Rules}
 
   @enforce_keys [:player, :rules]
