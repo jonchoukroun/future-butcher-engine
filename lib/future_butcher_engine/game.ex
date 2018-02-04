@@ -7,20 +7,26 @@ defmodule FutureButcherEngine.Game do
 
   @stations [:downtown, :venice_beach, :koreatown, :culver_city, :silverlake]
 
-  def start_link(turns, health, funds)
+  def start_link(player_name, turns, health, funds)
+  when is_binary(player_name)
   when is_integer(turns)
   when is_integer(health)
   when is_integer(funds) do
-    game_rules = %{turns: turns, health: health, funds: funds}
-    GenServer.start_link(__MODULE__, game_rules, [])
+    game_rules = %{
+      player_name: player_name, turns: turns, health: health, funds: funds}
+
+    GenServer.start_link(__MODULE__, game_rules, name: via_tuple(player_name))
   end
+
+  def via_tuple(name), do: {:via, Registry, {Registry.Game, name}}
 
   # Client functions
 
   def init(game_rules) do
     {:ok, %{
       rules: Rules.new(game_rules.turns),
-      player: Player.new(game_rules.health, game_rules.funds),
+      player: Player.new(
+        game_rules.player_name, game_rules.health, game_rules.funds),
       station: nil}}
   end
 
