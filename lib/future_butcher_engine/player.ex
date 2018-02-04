@@ -8,13 +8,15 @@ defmodule FutureButcherEngine.Player do
   @max_space 20
   @cut_keys [:flank, :heart, :loin, :liver, :ribs]
 
-  def new(health, funds) when health <= @max_health and funds > 0 do
+  def new(player_name, health, funds)
+  when is_binary(player_name)
+  when health <= @max_health and funds > 0 do
     %Player{
-      player_name: nil, health: health, funds: funds, debt: funds,
+      player_name: player_name, health: health, funds: funds, debt: funds,
       pack: initialize_pack()}
   end
 
-  def new(_health, _funds) do
+  def new(_name, _health, _funds) do
     {:error, :invalid_player_values}
   end
 
