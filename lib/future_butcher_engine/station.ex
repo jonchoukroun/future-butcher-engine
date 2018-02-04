@@ -27,7 +27,7 @@ defmodule FutureButcherEngine.Station do
     current_price.price
   end
 
-  defp get_price(_, type), do: nil
+  defp get_price(_quantity, _type), do: nil
 
   defp generate_quantity(type) do
     Enum.random(0..max_quantities(type))

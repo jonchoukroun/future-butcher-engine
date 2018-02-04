@@ -1,6 +1,6 @@
 defmodule FutureButcherEngine.Game do
   use GenServer
-  alias FutureButcherEngine.{Game, Player, Station, Rules}
+  alias FutureButcherEngine.{Player, Station, Rules}
 
   @enforce_keys [:player, :rules]
   defstruct [:player, :rules]

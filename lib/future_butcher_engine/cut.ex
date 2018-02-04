@@ -24,7 +24,7 @@ defmodule FutureButcherEngine.Cut do
     end
   end
 
-  def new(_type, quantity), do: {:error, :invalid_cut_type}
+  def new(_type, _quantity), do: {:error, :invalid_cut_type}
 
   def new(_), do: {:error, :missing_inputs}
 
