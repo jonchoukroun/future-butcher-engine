@@ -7,11 +7,13 @@ defmodule FutureButcherEngine.Game do
 
   @stations [:downtown, :venice_beach, :koreatown, :culver_city, :silverlake]
 
+  # Hardcoded to allow game/player creation from player_name arg only
   @turns 10
   @health 100
   @funds 5000
 
-  @timeout 15000
+  # Temporarily set to full day during dev
+  @timeout 24 * 60 * 60 * 1000
 
   def start_link(player_name) when is_binary(player_name) do
     game_rules = %{
@@ -21,6 +23,10 @@ defmodule FutureButcherEngine.Game do
   end
 
   def via_tuple(name), do: {:via, Registry, {Registry.Game, name}}
+
+  def handle_info(:timeout, state_data) do
+    {:stop, {:shutdown, :timeout}, state_data}
+  end
 
   # Client functions
 
