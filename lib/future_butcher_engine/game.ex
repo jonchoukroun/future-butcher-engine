@@ -11,6 +11,8 @@ defmodule FutureButcherEngine.Game do
   @health 100
   @funds 5000
 
+  @timeout 15000
+
   def start_link(player_name) when is_binary(player_name) do
     game_rules = %{
       player_name: player_name, turns: @turns, health: @health, funds: @funds}
@@ -27,7 +29,9 @@ defmodule FutureButcherEngine.Game do
       rules: Rules.new(game_rules.turns),
       player: Player.new(
         game_rules.player_name, game_rules.health, game_rules.funds),
-      station: nil}}
+      station: nil},
+      @timeout
+    }
   end
 
   def start_game(game) do
@@ -84,7 +88,7 @@ defmodule FutureButcherEngine.Game do
       |> update_rules(rules)
       |> reply_success({:ok, :visiting_market})
     else
-      {:error, msg} -> {:reply, {:error, msg}, state_data}
+      {:error, msg} -> reply_failure(state_data, msg)
     end
   end
 
@@ -95,7 +99,7 @@ defmodule FutureButcherEngine.Game do
       |> update_rules(rules)
       |> reply_success({:ok, :left_market})
     else
-      {:error, msg} -> {:reply, {:error, msg}, state_data}
+      {:error, msg} -> reply_failure(state_data, msg)
     end
   end
 
@@ -112,7 +116,7 @@ defmodule FutureButcherEngine.Game do
       |> reply_success(
         {:ok, String.to_atom("#{amount}_#{cut}_bought_for_#{cost}")})
     else
-      {:error, msg} -> {:reply, {:error, msg}, state_data}
+      {:error, msg} -> reply_failure(state_data, msg)
     end
   end
 
@@ -129,7 +133,7 @@ defmodule FutureButcherEngine.Game do
       |> reply_success(
         {:ok, String.to_atom("#{amount}_#{cut}_sold_for_#{profit}")})
     else
-      {:error, msg} -> {:reply, {:error, msg}, state_data}
+      {:error, msg} -> reply_failure(state_data, msg)
     end
   end
 
@@ -140,7 +144,7 @@ defmodule FutureButcherEngine.Game do
       |> update_rules(rules)
       |> reply_success({:ok, :visit_subway})
     else
-      {:error, msg} -> {:reply, {:error, msg}, state_data}
+      {:error, msg} -> reply_failure(state_data, msg)
     end
   end
 
@@ -151,7 +155,7 @@ defmodule FutureButcherEngine.Game do
       |> update_rules(rules)
       |> reply_success({:ok, :left_subway})
     else
-      {:error, msg} -> {:reply, {:error, msg}, state_data}
+      {:error, msg} -> reply_failure(state_data, msg)
     end
   end
 
@@ -167,7 +171,7 @@ defmodule FutureButcherEngine.Game do
     else
       {:game_over, rules} ->
         state_data |> update_rules(rules) |> end_game()
-      {:error, msg} -> {:reply, {:error, msg}, state_data}
+      {:error, msg} -> reply_failure(state_data, msg)
     end
   end
 
@@ -231,7 +235,13 @@ defmodule FutureButcherEngine.Game do
 
   # Replies
 
-  defp reply_success(state_data, reply), do: {:reply, reply, state_data}
+  defp reply_success(state_data, reply) do
+    {:reply, reply, state_data, @timeout}
+  end
+
+  defp reply_failure(state_data, reply) do
+    {:reply, reply, state_data, @timeout}
+  end
 
   defp end_game(state_data), do: {:reply, :game_over, state_data}
 
