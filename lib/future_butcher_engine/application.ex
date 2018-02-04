@@ -12,8 +12,8 @@ defmodule FutureButcherEngine.Application do
       FutureButcherEngine.GameSupervisor
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
+    :ets.new(:game_state, [:public, :named_table])
+
     opts = [strategy: :one_for_one, name: FutureButcherEngine.Supervisor]
     Supervisor.start_link(children, opts)
   end
