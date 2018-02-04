@@ -15,11 +15,8 @@ defmodule FutureButcherEngine.Game do
   # Temporarily set to full day during dev
   @timeout 24 * 60 * 60 * 1000
 
-  def start_link(player_name) when is_binary(player_name) do
-    game_rules = %{
-      player_name: player_name, turns: @turns, health: @health, funds: @funds}
-
-    GenServer.start_link(__MODULE__, game_rules, name: via_tuple(player_name))
+  def start_link(name) when is_binary(name) do
+    GenServer.start_link(__MODULE__, name, name: via_tuple(name))
   end
 
   def via_tuple(name), do: {:via, Registry, {Registry.Game, name}}
@@ -30,13 +27,16 @@ defmodule FutureButcherEngine.Game do
 
   # Client functions
 
-  def init(game_rules) do
-    {:ok, %{
-      rules: Rules.new(game_rules.turns),
-      player: Player.new(
-        game_rules.player_name, game_rules.health, game_rules.funds),
-      station: nil},
-      @timeout
+  def init(name) do
+    send(self(), {:set_state, name})
+    {:ok, fresh_state(name)}
+  end
+
+  defp fresh_state(name) do
+    %{
+      rules: Rules.new(@turns),
+      player: Player.new(name, @health, @funds),
+      station: nil
     }
   end
 
@@ -74,6 +74,22 @@ defmodule FutureButcherEngine.Game do
 
 
   # GenServer callbacks
+
+  def handle_info({:set_state, name}, _state_data) do
+    state_data = case :ets.lookup(:game_state, name) do
+      [] -> fresh_state(name)
+      [{_key, state}] -> state
+    end
+    :ets.insert(:game_state, {name, state_data})
+    {:noreply, state_data, @timeout}
+  end
+
+  def terminate({:shutdown, :timeout}, state_data) do
+    :ets.delete(:game_state, state_data.player.player_name)
+    :ok
+  end
+
+  def terminate(_reason, _timeout), do: :ok
 
   def handle_call(:start_game, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :start_game)
@@ -242,6 +258,7 @@ defmodule FutureButcherEngine.Game do
   # Replies
 
   defp reply_success(state_data, reply) do
+    :ets.insert(:game_state, {state_data.player.player_name, state_data})
     {:reply, reply, state_data, @timeout}
   end
 
