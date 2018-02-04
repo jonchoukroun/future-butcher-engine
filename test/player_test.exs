@@ -2,18 +2,6 @@ defmodule FutureButcherEngine.PlayerTest do
   use ExUnit.Case
   alias FutureButcherEngine.Player
 
-  test "Player.new/4 when health exceeds max returns error" do
-    assert Player.new("Frank", 200, 1000) == {:error, :invalid_player_values}
-  end
-
-  test "Player.new/4 when funds is invalid returns error" do
-    assert Player.new("Frank", 100, 0) == {:error, :invalid_player_values}
-  end
-
-  test "Player.new/4 when name is invalid returns error" do
-    assert Player.new(13, 100, 1000) == {:error, :invalid_player_values}
-  end
-
   test "Buying with insufficient funds returns error" do
     player = Player.new("Frank", 100, 1000)
     assert Player.buy_cut(player, :ribs, 20, 1300) == {
