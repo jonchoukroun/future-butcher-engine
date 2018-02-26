@@ -123,7 +123,8 @@ defmodule FutureButcherEngine.Game do
 
   def handle_call({:change_station, destination}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :change_station),
-                {:ok} <- valid_destination?(destination)
+                {:ok} <- valid_destination?(
+                          state_data.station.station_name, destination)
     do
       state_data
       |> update_rules(rules)
@@ -148,7 +149,13 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  defp valid_destination?(destination) when destination in @stations, do: {:ok}
+  defp valid_destination?(destination, station_name)
+  when destination === station_name do
+    {:error, :already_at_station}
+  end
+
+  defp valid_destination?(destination, _) when destination in @stations,
+    do: {:ok}
 
   defp valid_destination?(_), do: {:error, :invalid_station}
 
