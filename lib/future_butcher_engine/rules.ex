@@ -21,40 +21,24 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
-  def check(%Rules{state: :in_game} = rules, :visit_market) do
-    {:ok, %Rules{rules | state: :at_market}}
-  end
-
-  def check(%Rules{state: :in_game} = rules, :visit_subway) do
-    {:ok, %Rules{rules | state: :at_subway}}
-  end
-
   def check(%Rules{state: :in_game} = rules, :end_game) do
     {:ok, %Rules{rules | state: :game_over}}
   end
 
-  def check(%Rules{state: :at_market} = rules, :buy_cut) do
-    {:ok, %Rules{rules | state: :at_market}}
-  end
-
-  def check(%Rules{state: :at_market} = rules, :sell_cut) do
-    {:ok, %Rules{rules | state: :at_market}}
-  end
-
-  def check(%Rules{state: :at_market} = rules, :leave_market) do
+  def check(%Rules{state: :in_game} = rules, :buy_cut) do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
-  def check(%Rules{state: :at_subway} = rules, :leave_subway) do
+  def check(%Rules{state: :in_game} = rules, :sell_cut) do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
-  def check(%Rules{state: :at_subway, turns_left: 0} = rules,
+  def check(%Rules{state: :in_game, turns_left: 0} = rules,
     :change_station) do
     {:game_over, %Rules{rules | state: :game_over}}
   end
 
-  def check(%Rules{state: :at_subway} = rules, :change_station) do
+  def check(%Rules{state: :in_game} = rules, :change_station) do
     rules = decrement_turn(rules)
     {:ok, %Rules{rules | state: :in_game}}
   end
