@@ -44,28 +44,12 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, :start_game)
   end
 
-  def visit_market(game) do
-    GenServer.call(game, :visit_market)
-  end
-
-  def leave_market(game) do
-    GenServer.call(game, :leave_market)
-  end
-
   def buy_cut(game, cut, amount) when amount > 0 do
     GenServer.call(game, {:buy_cut, cut, amount})
   end
 
   def sell_cut(game, cut, amount) when amount > 0 do
     GenServer.call(game, {:sell_cut, cut, amount})
-  end
-
-  def visit_subway(game) do
-    GenServer.call(game, :visit_subway)
-  end
-
-  def leave_subway(game) do
-    GenServer.call(game, :leave_subway)
   end
 
   def change_station(game, destination) do
@@ -103,28 +87,6 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def handle_call(:visit_market, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :visit_market)
-    do
-      state_data
-      |> update_rules(rules)
-      |> reply_success({:ok, :visiting_market})
-    else
-      {:error, msg} -> reply_failure(state_data, msg)
-    end
-  end
-
-  def handle_call(:leave_market, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :leave_market)
-    do
-      state_data
-      |> update_rules(rules)
-      |> reply_success({:ok, :left_market})
-    else
-      {:error, msg} -> reply_failure(state_data, msg)
-    end
-  end
-
   def handle_call({:buy_cut, cut, amount}, _from, state_data) do
     with  {:ok, rules} <- Rules.check(state_data.rules, :buy_cut),
                  {:ok} <- valid_amount?(state_data.station.market, cut, amount),
@@ -154,28 +116,6 @@ defmodule FutureButcherEngine.Game do
       |> update_rules(rules)
       |> reply_success(
         {:ok, String.to_atom("#{amount}_#{cut}_sold_for_#{profit}")})
-    else
-      {:error, msg} -> reply_failure(state_data, msg)
-    end
-  end
-
-  def handle_call(:visit_subway, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :visit_subway)
-    do
-      state_data
-      |> update_rules(rules)
-      |> reply_success({:ok, :visit_subway})
-    else
-      {:error, msg} -> reply_failure(state_data, msg)
-    end
-  end
-
-  def handle_call(:leave_subway, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :leave_subway)
-    do
-      state_data
-      |> update_rules(rules)
-      |> reply_success({:ok, :left_subway})
     else
       {:error, msg} -> reply_failure(state_data, msg)
     end
