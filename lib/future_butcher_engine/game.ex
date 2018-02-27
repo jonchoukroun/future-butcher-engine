@@ -81,7 +81,7 @@ defmodule FutureButcherEngine.Game do
       state_data
       |> update_rules(rules)
       |> travel_to(:downtown)
-      |> reply_success({:ok, :game_started})
+      |> reply_success(:ok)
     else
       {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
@@ -97,8 +97,7 @@ defmodule FutureButcherEngine.Game do
       |> update_market(cut, amount, :buy)
       |> update_player(player)
       |> update_rules(rules)
-      |> reply_success(
-        {:ok, String.to_atom("#{amount}_#{cut}_bought_for_#{cost}")})
+      |> reply_success(:ok)
     else
       {:error, msg} -> reply_failure(state_data, msg)
     end
@@ -114,8 +113,7 @@ defmodule FutureButcherEngine.Game do
       |> update_market(cut, amount, :sell)
       |> update_player(player)
       |> update_rules(rules)
-      |> reply_success(
-        {:ok, String.to_atom("#{amount}_#{cut}_sold_for_#{profit}")})
+      |> reply_success(:ok)
     else
       {:error, msg} -> reply_failure(state_data, msg)
     end
@@ -129,8 +127,7 @@ defmodule FutureButcherEngine.Game do
       state_data
       |> update_rules(rules)
       |> travel_to(destination)
-      |> reply_success(
-        {:ok, String.to_atom("traveled_to_#{Atom.to_string(destination)}")})
+      |> reply_success(:ok)
     else
       {:game_over, rules} ->
         state_data |> update_rules(rules) |> end_game()
@@ -206,6 +203,8 @@ defmodule FutureButcherEngine.Game do
 
   defp reply_success(state_data, reply) do
     :ets.insert(:game_state, {state_data.player.player_name, state_data})
+
+    reply = {reply, state_data}
     {:reply, reply, state_data, @timeout}
   end
 
