@@ -44,28 +44,12 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, :start_game)
   end
 
-  def visit_market(game) do
-    GenServer.call(game, :visit_market)
-  end
-
-  def leave_market(game) do
-    GenServer.call(game, :leave_market)
-  end
-
   def buy_cut(game, cut, amount) when amount > 0 do
     GenServer.call(game, {:buy_cut, cut, amount})
   end
 
   def sell_cut(game, cut, amount) when amount > 0 do
     GenServer.call(game, {:sell_cut, cut, amount})
-  end
-
-  def visit_subway(game) do
-    GenServer.call(game, :visit_subway)
-  end
-
-  def leave_subway(game) do
-    GenServer.call(game, :leave_subway)
   end
 
   def change_station(game, destination) do
@@ -97,31 +81,9 @@ defmodule FutureButcherEngine.Game do
       state_data
       |> update_rules(rules)
       |> travel_to(:downtown)
-      |> reply_success({:ok, :game_started})
+      |> reply_success(:ok)
     else
       {:error, msg} -> {:reply, {:error, msg}, state_data}
-    end
-  end
-
-  def handle_call(:visit_market, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :visit_market)
-    do
-      state_data
-      |> update_rules(rules)
-      |> reply_success({:ok, :visiting_market})
-    else
-      {:error, msg} -> reply_failure(state_data, msg)
-    end
-  end
-
-  def handle_call(:leave_market, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :leave_market)
-    do
-      state_data
-      |> update_rules(rules)
-      |> reply_success({:ok, :left_market})
-    else
-      {:error, msg} -> reply_failure(state_data, msg)
     end
   end
 
@@ -135,8 +97,7 @@ defmodule FutureButcherEngine.Game do
       |> update_market(cut, amount, :buy)
       |> update_player(player)
       |> update_rules(rules)
-      |> reply_success(
-        {:ok, String.to_atom("#{amount}_#{cut}_bought_for_#{cost}")})
+      |> reply_success(:ok)
     else
       {:error, msg} -> reply_failure(state_data, msg)
     end
@@ -152,30 +113,7 @@ defmodule FutureButcherEngine.Game do
       |> update_market(cut, amount, :sell)
       |> update_player(player)
       |> update_rules(rules)
-      |> reply_success(
-        {:ok, String.to_atom("#{amount}_#{cut}_sold_for_#{profit}")})
-    else
-      {:error, msg} -> reply_failure(state_data, msg)
-    end
-  end
-
-  def handle_call(:visit_subway, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :visit_subway)
-    do
-      state_data
-      |> update_rules(rules)
-      |> reply_success({:ok, :visit_subway})
-    else
-      {:error, msg} -> reply_failure(state_data, msg)
-    end
-  end
-
-  def handle_call(:leave_subway, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :leave_subway)
-    do
-      state_data
-      |> update_rules(rules)
-      |> reply_success({:ok, :left_subway})
+      |> reply_success(:ok)
     else
       {:error, msg} -> reply_failure(state_data, msg)
     end
@@ -183,13 +121,13 @@ defmodule FutureButcherEngine.Game do
 
   def handle_call({:change_station, destination}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :change_station),
-                {:ok} <- valid_destination?(destination)
+                {:ok} <- valid_destination?(
+                          state_data.station.station_name, destination)
     do
       state_data
       |> update_rules(rules)
       |> travel_to(destination)
-      |> reply_success(
-        {:ok, String.to_atom("traveled_to_#{Atom.to_string(destination)}")})
+      |> reply_success(:ok)
     else
       {:game_over, rules} ->
         state_data |> update_rules(rules) |> end_game()
@@ -208,7 +146,13 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  defp valid_destination?(destination) when destination in @stations, do: {:ok}
+  defp valid_destination?(destination, station_name)
+  when destination === station_name do
+    {:error, :already_at_station}
+  end
+
+  defp valid_destination?(destination, _) when destination in @stations,
+    do: {:ok}
 
   defp valid_destination?(_), do: {:error, :invalid_station}
 
@@ -259,6 +203,8 @@ defmodule FutureButcherEngine.Game do
 
   defp reply_success(state_data, reply) do
     :ets.insert(:game_state, {state_data.player.player_name, state_data})
+
+    reply = {reply, state_data}
     {:reply, reply, state_data, @timeout}
   end
 
