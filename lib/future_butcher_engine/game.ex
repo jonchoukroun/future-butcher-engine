@@ -130,7 +130,7 @@ defmodule FutureButcherEngine.Game do
       |> reply_success(:ok)
     else
       {:game_over, rules} ->
-        state_data |> update_rules(rules) |> end_game()
+        state_data |> update_rules(rules) |> reply_success(:game_over)
       {:error, msg} -> reply_failure(state_data, msg)
     end
   end
@@ -211,7 +211,5 @@ defmodule FutureButcherEngine.Game do
   defp reply_failure(state_data, reply) do
     {:reply, reply, state_data, @timeout}
   end
-
-  defp end_game(state_data), do: {:reply, :game_over, state_data}
 
 end
