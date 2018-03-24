@@ -71,28 +71,60 @@ defmodule FutureButcherEngine.PlayerTest do
     assert player.debt > 0
 
     {:ok, player} = Player.adjust_funds(player, 1000, :increase)
-    {:ok, player} = Player.pay_debt(player)
+    {:ok, player} = Player.pay_debt(player, player.debt)
 
     assert Player.accrue_debt(player) == {:ok, player}
     assert player.debt == 0
   end
 
-  test "Paying debt when less than funds clears debts and reduces funds" do
+  test "Paying debt with amount less debt reduces funds and debt" do
     player = Player.new("Frank", 100, 1000)
     {:ok, player} = Player.adjust_funds(player, 1000, :increase)
     assert player.funds > player.debt
 
-    {:ok, player} = Player.pay_debt(player)
+    amount = 100
+    assert amount < player.funds
+    assert amount < player.debt
+
+    {:ok, player} = Player.pay_debt(player, amount)
+    assert player.debt == 900
+    assert player.funds == 1900
+  end
+
+  test "Paying debt with amount equal to debt clears debt" do
+    player = Player.new("Frank", 100, 1000)
+    {:ok, player} = Player.adjust_funds(player, 1000, :increase)
+    assert player.funds > player.debt
+
+    amount = player.debt
+    assert amount < player.funds
+
+    {:ok, player} = Player.pay_debt(player, amount)
     assert player.debt == 0
     assert player.funds == 1000
   end
 
-  test "Paying debt when more than funds returns error" do
+  test "Paying debt with amount greater than funds returns error" do
     player = Player.new("Frank", 100, 1000)
-    refute player.funds > player.debt
     {:ok, player} = Player.adjust_funds(player, 100, :decrease)
+    refute player.funds > player.debt
 
-    assert Player.pay_debt(player) == {:error, :insufficient_funds}
+    amount = player.funds
+
+    assert Player.pay_debt(player, amount) == {:error, :insufficient_funds}
+  end
+
+  test "Paying debt with amount greater than debt clears debt" do
+    player = Player.new("Frank", 100, 1000)
+    {:ok, player} = Player.adjust_funds(player, 1000, :increase)
+    assert player.funds > player.debt
+
+    amount = 1100
+    assert amount < player.funds
+
+    {:ok, player} = Player.pay_debt(player, amount)
+    assert player.debt == 0
+    assert player.funds == 1000
   end
 
   test "Hurting player by more than current health results in death" do
