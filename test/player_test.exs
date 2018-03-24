@@ -58,6 +58,25 @@ defmodule FutureButcherEngine.PlayerTest do
     assert player.funds == 1500
   end
 
+  test "Accruing debt raises debt amount by 15% when debt is > 0" do
+    player = Player.new("Frank", 100, 1000)
+    assert player.debt > 0
+
+    {:ok, player} = Player.accrue_debt(player)
+    assert player.debt == (1000 * 1.15)
+  end
+
+  test "Debt doesn't accrue when paid off" do
+    player = Player.new("Frank", 100, 1000)
+    assert player.debt > 0
+
+    {:ok, player} = Player.adjust_funds(player, 1000, :increase)
+    {:ok, player} = Player.repay_debt(player)
+
+    assert Player.accrue_debt(player) == {:ok, player}
+    assert player.debt == 0
+  end
+
   test "Repaying debt when less than funds clears debts and reduces funds" do
     player = Player.new("Frank", 100, 1000)
     {:ok, player} = Player.adjust_funds(player, 1000, :increase)
