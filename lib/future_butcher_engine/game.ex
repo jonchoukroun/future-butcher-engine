@@ -52,6 +52,10 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, {:sell_cut, cut, amount})
   end
 
+  def pay_debt(game) do
+    GenServer.call(game, :pay_debt)
+  end
+
   def change_station(game, destination) do
     GenServer.call(game, {:change_station, destination})
   end
@@ -113,6 +117,19 @@ defmodule FutureButcherEngine.Game do
       |> update_market(cut, amount, :sell)
       |> update_player(player)
       |> update_rules(rules)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+
+  def handle_call(:pay_debt, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :pay_debt),
+        {:ok, player} <- Player.pay_debt(state_data.player)
+    do
+      state_data
+      |> update_rules(rules)
+      |> update_player(player)
       |> reply_success(:ok)
     else
       {:error, msg} -> reply_failure(state_data, msg)
