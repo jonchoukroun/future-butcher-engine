@@ -44,7 +44,8 @@ defmodule FutureButcherEngine.Player do
   end
 
   def accrue_debt(%Player{debt: debt} = player) when debt > 0 do
-    {:ok, player |> increase_attribute(debt * 0.15, :debt)}
+    new_debt = debt |> Kernel.*(1000) |> Kernel.*(0.15) |> Kernel./(1000) |> Kernel.round
+    {:ok, player |> increase_attribute(new_debt, :debt)}
   end
 
   def accrue_debt(%Player{debt: debt} = player), do: {:ok, player}
