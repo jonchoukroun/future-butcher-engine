@@ -122,10 +122,12 @@ defmodule FutureButcherEngine.Game do
   def handle_call({:change_station, destination}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :change_station),
                 {:ok} <- valid_destination?(
-                          state_data.station.station_name, destination)
+                          state_data.station.station_name, destination),
+        {:ok, player} <- Player.accrue_debt(state_data.player)
     do
       state_data
       |> update_rules(rules)
+      |> update_player(player)
       |> travel_to(destination)
       |> reply_success(:ok)
     else
