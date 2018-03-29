@@ -43,13 +43,22 @@ defmodule FutureButcherEngine.Player do
     end
   end
 
-  def repay_debt(%Player{funds: funds, debt: debt} = player)
-  when funds >= debt do
-    {:ok, player} = adjust_funds(player, debt, :decrease)
-    {:ok, player |> decrease_attribute(debt, :debt)}
+  def accrue_debt(%Player{debt: debt} = player) when debt > 0 do
+    new_debt =
+      debt |> Kernel.*(1000) |> Kernel.*(0.15) |> Kernel./(1000) |> Kernel.round
+    {:ok, player |> increase_attribute(new_debt, :debt)}
   end
 
-  def repay_debt(_), do: {:error, :insufficient_funds}
+  def accrue_debt(player), do: {:ok, player}
+
+  def pay_debt(%Player{funds: funds, debt: debt} = player, amount)
+  when funds > amount do
+    payoff = Enum.min [debt, amount]
+    {:ok, player} = adjust_funds(player, payoff, :decrease)
+    {:ok, player |> decrease_attribute(payoff, :debt)}
+  end
+
+  def pay_debt(_player, _amount), do: {:error, :insufficient_funds}
 
   def adjust_funds(%Player{funds: funds} = player, amount, :decrease)
   when amount > funds do

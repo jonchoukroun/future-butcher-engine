@@ -52,6 +52,10 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, {:sell_cut, cut, amount})
   end
 
+  def pay_debt(game, amount) when amount > 0 do
+    GenServer.call(game, {:pay_debt, amount})
+  end
+
   def change_station(game, destination) do
     GenServer.call(game, {:change_station, destination})
   end
@@ -119,18 +123,33 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def handle_call({:change_station, destination}, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :change_station),
-                {:ok} <- valid_destination?(
-                          state_data.station.station_name, destination)
+  def handle_call({:pay_debt, amount}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :pay_debt),
+        {:ok, player} <- Player.pay_debt(state_data.player, amount)
     do
       state_data
       |> update_rules(rules)
+      |> update_player(player)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+
+  def handle_call({:change_station, destination}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :change_station),
+                {:ok} <- valid_destination?(
+                          state_data.station.station_name, destination),
+        {:ok, player} <- Player.accrue_debt(state_data.player)
+    do
+      state_data
+      |> update_rules(rules)
+      |> update_player(player)
       |> travel_to(destination)
       |> reply_success(:ok)
     else
       {:game_over, rules} ->
-        state_data |> update_rules(rules) |> end_game()
+        state_data |> update_rules(rules) |> reply_success(:game_over)
       {:error, msg} -> reply_failure(state_data, msg)
     end
   end
@@ -211,7 +230,5 @@ defmodule FutureButcherEngine.Game do
   defp reply_failure(state_data, reply) do
     {:reply, reply, state_data, @timeout}
   end
-
-  defp end_game(state_data), do: {:reply, :game_over, state_data}
 
 end
