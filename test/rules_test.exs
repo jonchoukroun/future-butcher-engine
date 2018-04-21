@@ -21,18 +21,11 @@ defmodule FutureButcherEngine.RulesTest do
     end
   end
 
-  describe "Game with no turns left" do
-    setup do
-      rules = %Rules{Rules.new(1) | turns_left: 0, state: :in_game}
-      {:ok, rules: rules}
-    end
-
-    test "Changing station from subway ends game", context do
-      {:ok, rules} = Rules.check(context.rules, :visit_subway)
-      {status, rules} = Rules.check(rules, :change_station)
-      assert status == :game_over
-      assert rules.state == :game_over
-    end
+  test "Changing station from subway ends game", context do
+    rules = %Rules{Rules.new(1) | turns_left: 0, state: :in_game}
+    {status, rules} = Rules.check(rules, :change_station)
+    assert status == :game_over
+    assert rules.state == :game_over
   end
 
   test "No events change rules over state" do
@@ -43,7 +36,7 @@ defmodule FutureButcherEngine.RulesTest do
 
   test "Change station returns in rules state and decrements turns left" do
     rules = Rules.new(5)
-    rules = %Rules{rules | state: :at_subway}
+    rules = %Rules{rules | state: :in_game}
     {:ok, rules} = Rules.check(rules, :change_station)
     assert rules.state == :in_game
     assert rules.turns_left == 4
