@@ -8,7 +8,7 @@ defmodule FutureButcherEngine.Game do
   @stations [:downtown, :venice_beach, :koreatown, :culver_city, :silverlake]
 
   # Hardcoded to allow game/player creation from player_name arg only
-  @turns 10
+  @turns 24
   @health 100
   @funds 5000
 
