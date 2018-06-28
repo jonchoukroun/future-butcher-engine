@@ -55,28 +55,28 @@ defmodule FutureButcherEngine.Player do
 
   def handle_travel(player) do
     {:ok, player} = accrue_debt(player)
-    {:ok, player} = determine_random_encounter() |> handle_encounter(player)
+    {:ok, player} = determine_random_encounter(player) |> handle_encounter(player)
   end
 
   def handle_encounter(:mugging, player), do: {:ok, player}
 
-  def handle_encounter(:find_pack, %Player{pack: pack} = player) do
-    {:ok, player |> Map.put(:pack, increase_cut(pack, pick_random_cut(), Enum.random(1..3)))}
+  def handle_encounter(:find_pack, %{amount: amount}, player) when amount == 0, do: {:ok, player}
+
+  def handle_encounter(:find_pack, %{cut: cut, amount: amount}, player) do
+    case sufficient_space?(player, amount) do
+      {:ok} ->
+        {:ok, player |> Map.put(:pack, increase_cut(player.pack, cut, amount))}
+
+      {:error, :insufficient_pack_space} ->
+        handle_encounter(:find_pack, %{cut: cut, amount: amount - 1}, player)
+    end
   end
 
   def handle_encounter(:no_encounter, player), do: {:ok, player}
 
-  def determine_random_encounter do
-    case Enum.random(1..10) do
-      n when n in 1..4  -> :mugging
-      n when n in 5..8  -> :find_pack
-      n when n in 9..10 -> :no_encounter
-    end
-  end
-
   # Player adjustments
 
-  defp accrue_debt(%Player{debt: debt} = player) when debt > 0 do
+  def accrue_debt(%Player{debt: debt} = player) when debt > 0 do
     new_debt = debt
       |> Kernel.*(1000)
       |> Kernel.*(0.15)
@@ -86,39 +86,35 @@ defmodule FutureButcherEngine.Player do
     {:ok, player |> increase_attribute(new_debt, :debt)}
   end
 
-  defp accrue_debt(player), do: {:ok, player}
+  def accrue_debt(player), do: {:ok, player}
 
-  defp adjust_funds(%Player{funds: funds} = player, amount, :decrease) when amount > funds do
+  def adjust_funds(%Player{funds: funds} = player, amount, :decrease) when amount > funds do
     {:ok, player |> Map.put(:funds, 0)}
   end
 
-  defp adjust_funds(player, amount, :decrease) do
+  def adjust_funds(player, amount, :decrease) do
     {:ok, player |> decrease_attribute(amount, :funds) }
   end
 
-  defp adjust_funds(player, amount, :increase) do
+  def adjust_funds(player, amount, :increase) do
     {:ok , player |> increase_attribute(amount, :funds)}
   end
 
-  defp adjust_health(%Player{health: health} = player, amount, :heal)
+  def adjust_health(%Player{health: health} = player, amount, :heal)
   when amount + health > @max_health do
     {:ok, player |> increase_attribute((@max_health - health), :health)}
   end
 
-  defp adjust_health(player, amount, :heal) do
+  def adjust_health(player, amount, :heal) do
     {:ok, player |> increase_attribute(amount, :health)}
   end
 
-  defp adjust_health(%Player{health: health}, amount, :hurt) when amount > health do
+  def adjust_health(%Player{health: health}, amount, :hurt) when amount > health do
       {:ok, :player_dead}
   end
 
-  defp adjust_health(player, amount, :hurt) do
+  def adjust_health(player, amount, :hurt) do
     {:ok, player |> decrease_attribute(amount, :health)}
-  end
-
-  defp initialize_pack do
-    Map.new(@cut_keys, fn cut -> {cut, 0} end)
   end
 
 
@@ -171,6 +167,25 @@ defmodule FutureButcherEngine.Player do
 
   defp pick_random_cut do
     Enum.random(Cut.get_cuts_list)
+  end
+
+  defp calculate_cash_mugging(player) do
+    Float.round(player.funds * 0.80)
+  end
+
+  defp determine_random_encounter(player) do
+    case Enum.random(1..10) do
+      n when n in 1..4  ->
+        {:mugging, %{damage: Enum.random(10..20), cash: calculate_cash_mugging(player)}}
+      n when n in 5..8  ->
+        {:find_pack, %{cut: pick_random_cut(), amount: Enum.random(1..3)}}
+      n when n in 9..10 ->
+        :no_encounter
+    end
+  end
+
+  defp initialize_pack do
+    Map.new(@cut_keys, fn cut -> {cut, 0} end)
   end
 
 
