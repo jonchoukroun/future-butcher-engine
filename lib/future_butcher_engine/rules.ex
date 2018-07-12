@@ -37,8 +37,7 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
-  def check(%Rules{state: :in_game, turns_left: 0} = rules,
-    :change_station) do
+  def check(%Rules{state: :in_game, turns_left: 0} = rules, :change_station) do
     {:game_over, %Rules{rules | state: :game_over}}
   end
 
