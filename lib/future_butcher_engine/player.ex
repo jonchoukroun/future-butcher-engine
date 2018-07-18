@@ -1,30 +1,44 @@
 defmodule FutureButcherEngine.Player do
   alias __MODULE__
 
-  @enforce_keys [:player_name, :health, :funds, :debt, :pack]
-  defstruct [:player_name, :health, :funds, :debt, :pack]
+  @enforce_keys [:player_name, :health, :funds, :principle, :interest, :pack]
+  defstruct [:player_name, :health, :funds, :principle, :interest, :pack]
 
   @max_health 100
   @max_space 20
   @cut_keys [:flank, :heart, :loin, :liver, :ribs]
 
-  def new(player_name, health, funds)
-  when is_binary(player_name)
-  when health <= @max_health and funds > 0 do
+  def new(player_name) when is_binary(player_name) do
     %Player{
-      player_name: player_name, health: health, funds: funds, debt: funds,
+      player_name: player_name,
+      health: @max_health,
+      funds: 0, principle: 0, interest: 0.0,
       pack: initialize_pack()}
   end
 
-  def new(_name, _health, _funds) do
-    {:error, :invalid_player_values}
+  def new(_name) do
+    {:error, :invalid_player_name}
+  end
+
+  def buy_loan(player, principle, interest) when is_integer(interest) do
+    buy_loan(player, principle, interest * 1.0)
+  end
+
+  def buy_loan(player, principle, interest) when is_integer(principle) and is_float(interest) do
+    player = increase_attribute(player, :principle, principle)
+    player = increase_attribute(player, :interest, interest)
+    {:ok, player} = adjust_funds(player, :increase, principle)
+  end
+
+  def buy_loan(_) do
+    {:error, :invalid_loan_values}
   end
 
   def buy_cut(player, cut, amount, cost) do
     with {:ok} <- sufficient_funds?(player, cost),
          {:ok} <- sufficient_space?(player, amount)
      do
-      {:ok, player} = adjust_funds(player, cost, :decrease)
+      {:ok, player} = adjust_funds(player, :decrease, cost)
       {:ok, player
             |> Map.replace(:pack, increase_cut(player.pack, cut, amount))}
     else
@@ -35,7 +49,7 @@ defmodule FutureButcherEngine.Player do
   def sell_cut(player, cut, amount, profit) do
     with {:ok} <- sufficient_cuts?(player.pack, cut, amount)
     do
-      {:ok, player} = adjust_funds(player, profit, :increase)
+      {:ok, player} = adjust_funds(player, :increase, profit)
       {:ok, player
             |> Map.replace(:pack, decrease_cut(player.pack, cut, amount))}
     else
@@ -43,53 +57,60 @@ defmodule FutureButcherEngine.Player do
     end
   end
 
-  def accrue_debt(%Player{debt: debt} = player) when debt > 0 do
-    new_debt =
-      debt |> Kernel.*(1000) |> Kernel.*(0.15) |> Kernel./(1000) |> Kernel.round
-    {:ok, player |> increase_attribute(new_debt, :debt)}
+  def accrue_debt(%Player{principle: principle, interest: interest} = player) when principle > 0 do
+    new_principle =
+      principle |> Kernel.*(1000) |> Kernel.*(interest) |> Kernel./(1000) |> Kernel.round
+    {:ok, player |> increase_attribute(:principle, new_principle)}
   end
 
   def accrue_debt(player), do: {:ok, player}
 
-  def pay_debt(%Player{funds: funds, debt: debt} = player, amount)
-  when funds > amount do
-    payoff = Enum.min [debt, amount]
-    {:ok, player} = adjust_funds(player, payoff, :decrease)
-    {:ok, player |> decrease_attribute(payoff, :debt)}
+  def pay_debt(%Player{funds: funds, principle: principle} = player, amount)
+  when funds > amount and amount >= principle do
+    {:ok, player} = adjust_funds(player, :decrease, principle)
+    {:ok, player
+          |> decrease_attribute(:principle, principle)
+          |> decrease_attribute(:interest, player.interest)}
+  end
+
+  def pay_debt(%Player{funds: funds, principle: principle} = player, amount) when funds > amount do
+    payoff = Enum.min [principle, amount]
+    {:ok, player} = adjust_funds(player, :decrease, payoff)
+    {:ok, player |> decrease_attribute(:principle, payoff)}
   end
 
   def pay_debt(_player, _amount), do: {:error, :insufficient_funds}
 
-  def adjust_funds(%Player{funds: funds} = player, amount, :decrease)
+  def adjust_funds(%Player{funds: funds} = player, :decrease, amount)
   when amount > funds do
     {:ok, player |> Map.put(:funds, 0)}
   end
 
-  def adjust_funds(player, amount, :decrease) do
-    {:ok, player |> decrease_attribute(amount, :funds) }
+  def adjust_funds(player, :decrease, amount) do
+    {:ok, player |> decrease_attribute(:funds, amount) }
   end
 
-  def adjust_funds(player, amount, :increase) do
-    {:ok , player |> increase_attribute(amount, :funds)}
+  def adjust_funds(player, :increase, amount) do
+    {:ok, player |> increase_attribute(:funds, amount)}
   end
 
-  def adjust_health(%Player{health: health} = player, amount, :heal)
-  when amount + health > @max_health do
-    {:ok, player |> increase_attribute((@max_health - health), :health)}
-  end
-
-  def adjust_health(player, amount, :heal) do
-    {:ok, player |> increase_attribute(amount, :health)}
-  end
-
-  def adjust_health(%Player{health: health}, amount, :hurt)
-  when amount > health do
-      {:ok, :player_dead}
-  end
-
-  def adjust_health(player, amount, :hurt) do
-    {:ok, player |> decrease_attribute(amount, :health)}
-  end
+  # def adjust_health(%Player{health: health} = player, :heal, amount)
+  # when amount + health > @max_health do
+  #   {:ok, player |> increase_attribute(:health, (@max_health - health))}
+  # end
+  #
+  # def adjust_health(player, :heal, amount) do
+  #   {:ok, player |> increase_attribute(:health, amount)}
+  # end
+  #
+  # def adjust_health(%Player{health: health}, :hurt, amount)
+  # when amount > health do
+  #     {:ok, :player_dead}
+  # end
+  #
+  # def adjust_health(player, :hurt, amount) do
+  #   {:ok, player |> decrease_attribute(:health, amount)}
+  # end
 
   defp initialize_pack do
     Map.new(@cut_keys, fn cut -> {cut, 0} end)
@@ -115,7 +136,7 @@ defmodule FutureButcherEngine.Player do
     if Map.get(pack, cut) >= amount do
       {:ok}
     else
-      {:error, :insufficent_cuts}
+      {:error, :insufficient_cuts}
     end
   end
 
@@ -127,11 +148,11 @@ defmodule FutureButcherEngine.Player do
     pack |> Map.put(cut, Map.get(pack, cut) - amount)
   end
 
-  defp increase_attribute(player, amount, attribute) do
+  defp increase_attribute(player, attribute, amount) do
     player |> Map.put(attribute, Map.get(player, attribute) + amount)
   end
 
-  defp decrease_attribute(player, amount, attribute) do
+  defp decrease_attribute(player, attribute, amount) do
     player |> Map.put(attribute, Map.get(player, attribute) - amount)
   end
 
