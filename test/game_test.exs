@@ -7,8 +7,8 @@ defmodule GameTest do
     assert state.player.player_name == "Frank"
     assert state.player.health      == 100
     assert state.player.funds       == 0
-    assert state.player.principle   == 0
-    assert state.player.interest    == 0.0
+    assert state.player.debt        == 0
+    assert state.player.rate        == 0.0
   end
 
   test "Initializing game sets turns and game state" do
