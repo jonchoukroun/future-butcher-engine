@@ -30,7 +30,7 @@ defmodule FutureButcherEngine.Player do
     {:ok, player} = adjust_funds(player, :increase, principle)
   end
 
-  def buy_loan(_) do
+  def buy_loan(_player, _principle, _interest) do
     {:error, :invalid_loan_values}
   end
 
