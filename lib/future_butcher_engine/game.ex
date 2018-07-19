@@ -37,8 +37,8 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, :start_game)
   end
 
-  def buy_loan(game, principle, interest) do
-    GenServer.call(game, {:buy_loan, principle, interest})
+  def buy_loan(game, debt, rate) do
+    GenServer.call(game, {:buy_loan, debt, rate})
   end
 
   def buy_cut(game, cut, amount) when amount > 0 do
@@ -91,9 +91,9 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def handle_call({:buy_loan, principle, interest}, _from, state_data) do
+  def handle_call({:buy_loan, debt, rate}, _from, state_data) do
     with {:ok, rules}  <- Rules.check(state_data.rules, :buy_loan),
-         {:ok, player} <- Player.buy_loan(state_data.player, principle, interest)
+         {:ok, player} <- Player.buy_loan(state_data.player, debt, rate)
     do
       state_data
       |> update_rules(rules)
