@@ -19,7 +19,7 @@ defmodule FutureButcherEngine.RulesTest do
     end
   end
 
-  test "Changing station from subway ends game", context do
+  test "Changing station from subway ends game" do
     rules = %Rules{Rules.new(1) | turns_left: 0, state: :in_game}
     {status, rules} = Rules.check(rules, :change_station)
     assert status == :game_over
