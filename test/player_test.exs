@@ -7,8 +7,8 @@ defmodule FutureButcherEngine.PlayerTest do
     assert player.player_name == "Frank"
     assert player.health      == 100
     assert player.funds       == 0
-    assert player.principle   == 0
-    assert player.interest    == 0
+    assert player.debt        == 0
+    assert player.rate        == 0
 
     player.pack
     |> Map.keys()
@@ -19,35 +19,39 @@ defmodule FutureButcherEngine.PlayerTest do
     player = Player.new("Frank")
     {:ok, player} = Player.buy_loan(player, 5000, 2)
 
-    assert player.funds     == 5000
-    assert player.principle == 5000
-    assert player.interest  == 2.0
+    assert player.funds == 5000
+    assert player.debt  == 5000
+    assert player.rate  == 2.0
   end
 
-  test "Debt accrues on principle by interest rate" do
-    player    = Player.new("Frank")
-    principle = 5000
-    rate      = 0.5
-    {:ok, player} = Player.buy_loan(player, principle, rate)
+  test "Buying loan with existing debt return error" do
+    player = Player.new("Frank")
+    {:ok, player} = Player.buy_loan(player, 5000, 0.5)
+
+    assert Player.buy_loan(player, 1000, 0.1) == {:error, :already_has_debt}
+  end
+
+  test "Debt accrues on debt by rate rate" do
+    player = Player.new("Frank")
+    debt   = 5000
+    rate   = 0.5
+    {:ok, player} = Player.buy_loan(player, debt, rate)
     {:ok, player} = Player.accrue_debt(player)
 
-    assert player.principle == principle * (1 + rate)
+    assert player.debt == debt * (1 + rate)
   end
 
   test "Buying with insufficient funds returns error" do
     player = Player.new("Frank")
-    assert Player.buy_cut(player, :ribs, 20, 1300) == {
-      :error, :insufficient_funds}
+    assert Player.buy_cut(player, :ribs, 20, 1300) == {:error, :insufficient_funds}
   end
 
   test "Buying with insufficient space returns error" do
     {:ok, player} = Player.buy_loan(Player.new("Frank"), 5000, 0.5)
-    assert Player.buy_cut(player, :ribs, 100, 1) == {
-      :error, :insufficient_pack_space}
+    assert Player.buy_cut(player, :ribs, 100, 1) == {:error, :insufficient_pack_space}
 
     {:ok, player} = Player.buy_cut(player, :ribs, 10, 10)
-    assert Player.buy_cut(player, :ribs, 11, 10) == {
-      :error, :insufficient_pack_space}
+    assert Player.buy_cut(player, :ribs, 11, 10) == {:error, :insufficient_pack_space}
   end
 
   test "Valid purchase increases owned cut and decreases funds" do
@@ -91,38 +95,38 @@ defmodule FutureButcherEngine.PlayerTest do
 
   test "Debt doesn't accrue when paid off" do
     {:ok, player} = Player.buy_loan(Player.new("Frank"), 5000, 0.5)
-    assert player.principle > 0
+    assert player.debt > 0
 
     {:ok, player} = Player.adjust_funds(player, :increase, 1000)
-    {:ok, player} = Player.pay_debt(player, player.principle)
+    {:ok, player} = Player.pay_debt(player, player.debt)
 
     assert Player.accrue_debt(player) == {:ok, player}
-    assert player.principle == 0
+    assert player.debt == 0
   end
 
-  test "Paying debt with amount less debt reduces funds and principle but keeps interest" do
+  test "Paying debt with amount less debt reduces funds and debt but keeps rate" do
     {:ok, player} = Player.buy_loan(Player.new("Frank"), 5000, 0.5)
 
     {:ok, player} = Player.pay_debt(player, 1000)
-    assert player.principle == 4000
-    assert player.funds     == 4000
-    assert player.interest  == 0.5
+    assert player.debt  == 4000
+    assert player.funds == 4000
+    assert player.rate  == 0.5
   end
 
-  test "Paying debt in full clears principle and interest rate" do
+  test "Paying debt in full clears debt and rate rate" do
     {:ok, player} = Player.buy_loan(Player.new("Frank"), 5000, 0.5)
     {:ok, player} = Player.adjust_funds(player, :increase, 1000)
 
     {:ok, player} = Player.pay_debt(player, 5000)
-    assert player.funds     == 1000
-    assert player.principle == 0
-    assert player.interest  == 0.0
+    assert player.funds == 1000
+    assert player.debt  == 0
+    assert player.rate  == 0.0
   end
 
   test "Paying debt with amount greater than funds returns error" do
     {:ok, player} = Player.buy_loan(Player.new("Frank"), 5000, 0.5)
     {:ok, player} = Player.adjust_funds(player, :decrease, 100)
-    refute player.funds > player.principle
+    refute player.funds > player.debt
 
     amount = player.funds
 
