@@ -1,8 +1,8 @@
 defmodule FutureButcherEngine.Player do
   alias __MODULE__
 
-  @enforce_keys [:player_name, :health, :funds, :principle, :interest, :pack]
-  defstruct [:player_name, :health, :funds, :principle, :interest, :pack]
+  @enforce_keys [:player_name, :health, :funds, :debt, :rate, :pack]
+  defstruct [:player_name, :health, :funds, :debt, :rate, :pack]
 
   @max_health 100
   @max_space 20
@@ -12,7 +12,7 @@ defmodule FutureButcherEngine.Player do
     %Player{
       player_name: player_name,
       health: @max_health,
-      funds: 0, principle: 0, interest: 0.0,
+      funds: 0, debt: 0, rate: 0.0,
       pack: initialize_pack()}
   end
 
@@ -20,17 +20,22 @@ defmodule FutureButcherEngine.Player do
     {:error, :invalid_player_name}
   end
 
-  def buy_loan(player, principle, interest) when is_integer(interest) do
-    buy_loan(player, principle, interest * 1.0)
+  def buy_loan(%Player{debt: debt, rate: rate}, _debt, _rate) when debt > 0 and rate > 0 do
+    {:error, :already_has_debt}
   end
 
-  def buy_loan(player, principle, interest) when is_integer(principle) and is_float(interest) do
-    player = increase_attribute(player, :principle, principle)
-    player = increase_attribute(player, :interest, interest)
-    {:ok, player} = adjust_funds(player, :increase, principle)
+  def buy_loan(player, debt, rate) when is_integer(rate) do
+    buy_loan(player, debt, rate * 1.0)
   end
 
-  def buy_loan(_player, _principle, _interest) do
+  def buy_loan(player, debt, rate) when is_integer(debt) and is_float(rate) do
+    player = increase_attribute(player, :debt, debt)
+    player = increase_attribute(player, :rate, rate)
+
+    adjust_funds(player, :increase, debt)
+  end
+
+  def buy_loan(_player, _debt, _rate) do
     {:error, :invalid_loan_values}
   end
 
@@ -40,7 +45,7 @@ defmodule FutureButcherEngine.Player do
      do
       {:ok, player} = adjust_funds(player, :decrease, cost)
       {:ok, player
-            |> Map.replace(:pack, increase_cut(player.pack, cut, amount))}
+            |> Map.put(:pack, increase_cut(player.pack, cut, amount))}
     else
       {:error, msg} -> {:error, msg}
     end
@@ -51,32 +56,32 @@ defmodule FutureButcherEngine.Player do
     do
       {:ok, player} = adjust_funds(player, :increase, profit)
       {:ok, player
-            |> Map.replace(:pack, decrease_cut(player.pack, cut, amount))}
+            |> Map.put(:pack, decrease_cut(player.pack, cut, amount))}
     else
       {:error, msg} -> {:error, msg}
     end
   end
 
-  def accrue_debt(%Player{principle: principle, interest: interest} = player) when principle > 0 do
-    new_principle =
-      principle |> Kernel.*(1000) |> Kernel.*(interest) |> Kernel./(1000) |> Kernel.round
-    {:ok, player |> increase_attribute(:principle, new_principle)}
+  def accrue_debt(%Player{debt: debt, rate: rate} = player) when debt > 0 do
+    new_debt =
+      debt |> Kernel.*(1000) |> Kernel.*(rate) |> Kernel./(1000) |> Kernel.round
+    {:ok, player |> increase_attribute(:debt, new_debt)}
   end
 
   def accrue_debt(player), do: {:ok, player}
 
-  def pay_debt(%Player{funds: funds, principle: principle} = player, amount)
-  when funds > amount and amount >= principle do
-    {:ok, player} = adjust_funds(player, :decrease, principle)
+  def pay_debt(%Player{funds: funds, debt: debt} = player, amount)
+  when funds > amount and amount >= debt do
+    {:ok, player} = adjust_funds(player, :decrease, debt)
     {:ok, player
-          |> decrease_attribute(:principle, principle)
-          |> decrease_attribute(:interest, player.interest)}
+          |> decrease_attribute(:debt, debt)
+          |> decrease_attribute(:rate, player.rate)}
   end
 
-  def pay_debt(%Player{funds: funds, principle: principle} = player, amount) when funds > amount do
-    payoff = Enum.min [principle, amount]
+  def pay_debt(%Player{funds: funds, debt: debt} = player, amount) when funds > amount do
+    payoff = Enum.min [debt, amount]
     {:ok, player} = adjust_funds(player, :decrease, payoff)
-    {:ok, player |> decrease_attribute(:principle, payoff)}
+    {:ok, player |> decrease_attribute(:debt, payoff)}
   end
 
   def pay_debt(_player, _amount), do: {:error, :insufficient_funds}
