@@ -1,6 +1,6 @@
 defmodule GameTest do
   use ExUnit.Case
-  alias FutureButcherEngine.{Game, GameSupervisor}
+  alias FutureButcherEngine.Game
 
   test "Initializing game creates named player with health and no finances" do
     {:ok, state} = Game.init("Frank")
