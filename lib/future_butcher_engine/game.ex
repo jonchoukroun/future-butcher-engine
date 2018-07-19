@@ -7,10 +7,7 @@ defmodule FutureButcherEngine.Game do
 
   @stations [:downtown, :venice_beach, :koreatown, :culver_city, :silverlake]
 
-  # Hardcoded to allow game/player creation from player_name arg only
   @turns 25
-  @health 100
-  @funds 5000
 
   # Temporarily set to full day during dev
   @timeout 24 * 60 * 60 * 1000
@@ -20,10 +17,6 @@ defmodule FutureButcherEngine.Game do
   end
 
   def via_tuple(name), do: {:via, Registry, {Registry.Game, name}}
-
-  def handle_info(:timeout, state_data) do
-    {:stop, {:shutdown, :timeout}, state_data}
-  end
 
   # Client functions
 
@@ -35,13 +28,17 @@ defmodule FutureButcherEngine.Game do
   defp fresh_state(name) do
     %{
       rules: Rules.new(@turns),
-      player: Player.new(name, @health, @funds),
+      player: Player.new(name),
       station: nil
     }
   end
 
   def start_game(game) do
     GenServer.call(game, :start_game)
+  end
+
+  def buy_loan(game, debt, rate) do
+    GenServer.call(game, {:buy_loan, debt, rate})
   end
 
   def buy_cut(game, cut, amount) when amount > 0 do
@@ -62,6 +59,9 @@ defmodule FutureButcherEngine.Game do
 
 
   # GenServer callbacks
+  def handle_info(:timeout, state_data) do
+    {:stop, {:shutdown, :timeout}, state_data}
+  end
 
   def handle_info({:set_state, name}, _state_data) do
     state_data = case :ets.lookup(:game_state, name) do
@@ -88,6 +88,19 @@ defmodule FutureButcherEngine.Game do
       |> reply_success(:ok)
     else
       {:error, msg} -> {:reply, {:error, msg}, state_data}
+    end
+  end
+
+  def handle_call({:buy_loan, debt, rate}, _from, state_data) do
+    with {:ok, rules}  <- Rules.check(state_data.rules, :buy_loan),
+         {:ok, player} <- Player.buy_loan(state_data.player, debt, rate)
+    do
+      state_data
+      |> update_rules(rules)
+      |> update_player(player)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
     end
   end
 
@@ -173,7 +186,7 @@ defmodule FutureButcherEngine.Game do
   defp valid_destination?(destination, _) when destination in @stations,
     do: {:ok}
 
-  defp valid_destination?(_), do: {:error, :invalid_station}
+  defp valid_destination?(_destination, _), do: {:error, :invalid_station}
 
   defp cuts_owned?(pack, cut, amount) do
     if Map.get(pack, cut) >= amount do
