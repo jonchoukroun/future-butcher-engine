@@ -153,7 +153,7 @@ defmodule FutureButcherEngine.Game do
     with {:ok, rules} <- Rules.check(state_data.rules, :change_station),
                 {:ok} <- valid_destination?(
                           state_data.station.station_name, destination),
-        {:ok, player} <- Player.accrue_debt(state_data.player)
+        {:ok, player} <- Player.handle_travel(state_data.player)
     do
       state_data
       |> update_rules(rules)

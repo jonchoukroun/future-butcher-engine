@@ -28,6 +28,10 @@ defmodule FutureButcherEngine.Cut do
 
   def new(_), do: {:error, :missing_inputs}
 
+  def get_cuts_list do
+    @cuts_list
+  end
+
   defp calculate_price(type, quantity) do
     slope     = @cut_values[type][:slope]
     max_price = @cut_values[type][:max_price]
