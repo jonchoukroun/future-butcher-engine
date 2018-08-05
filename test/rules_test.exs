@@ -1,6 +1,6 @@
 defmodule FutureButcherEngine.RulesTest do
   use ExUnit.Case
-  alias FutureButcherEngine.{Rules}
+  alias FutureButcherEngine.Rules
 
   test "Passing non integer or less than 1 to new rules returns error" do
 
