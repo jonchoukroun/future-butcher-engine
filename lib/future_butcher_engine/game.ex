@@ -227,7 +227,7 @@ defmodule FutureButcherEngine.Game do
   defp update_rules(state_data, rules), do: %{state_data | rules: rules}
 
   defp travel_to(state_data, station) do
-    %{state_data | station: Station.new(station)}
+    %{state_data | station: Station.new(station, state_data.rules.turns_left)}
   end
 
 
