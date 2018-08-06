@@ -5,7 +5,7 @@ defmodule FutureButcherEngine.Game do
   @enforce_keys [:player, :rules]
   defstruct [:player, :rules]
 
-  @stations [:downtown, :venice_beach, :koreatown, :culver_city, :silverlake]
+  @stations [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
 
   @turns 25
 
