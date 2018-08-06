@@ -4,39 +4,78 @@ defmodule FutureButcherEngine.Station do
   @enforce_keys [:station_name, :market]
   defstruct [:station_name, :market]
 
-  @cuts [:flank, :heart, :liver, :loin, :ribs]
-  @stations [:downtown, :venice_beach, :koreatown, :culver_city, :silverlake]
+  @stations [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
 
-  def new(station) when station in @stations do
-    %Station{station_name: station, market: generate_market()}
+  def station_names, do: @stations
+
+  def new(station, turns_left) when station in @stations do
+    %Station{
+      station_name: station,
+      market: generate_market(station, turns_left),
+    }
   end
 
   def new(_), do: {:error, :invalid_station}
 
-  defp generate_market() do
-    Map.new(@cuts, fn type -> {type, generate_cut(type)} end)
+  def generate_market(station, turns_left) do
+    Map.new(Cut.cut_names, fn cut -> {cut, generate_cut(cut, station, turns_left)} end)
   end
 
-  def generate_cut(type) do
-    quantity = generate_quantity(type)
-    %{quantity: quantity, price: get_price(quantity, type)}
+  def generate_cut(cut, station, turns_left) do
+    quantity = generate_quantity(cut, station, turns_left)
+    %{quantity: quantity, price: get_price(quantity, cut)}
   end
 
-  defp get_price(quantity, type) when quantity > 0 do
-    {:ok, current_price} = Cut.new(type, quantity)
+  def generate_quantity(cut, station, turns_left) do
+    base_max = Cut.maximum_quantity(cut)
+    range    = get_adjusted_range(station, turns_left)
+    max      = base_max - (base_max * ((1 - range) / 2)) |> round()
+    min      = base_max * ((1 - range) / 2) + 1 |> round()
+    Enum.random(min..max)
+  end
+
+  def get_adjusted_range(:beverly_hills, turns_left) do
+    cond do
+      turns_left > 20 -> 0.6
+      turns_left > 15 -> 0.7
+      turns_left > 10 -> 0.8
+      turns_left > 5  -> 0.9
+      turns_left <= 5 -> 1.0
+    end
+  end
+  def get_adjusted_range(:downtown, turns_left) do
+    cond do
+      turns_left > 20   -> 0.7
+      turns_left > 15   -> 0.8
+      turns_left > 10   -> 0.9
+      turns_left <= 10  -> 1.0
+    end
+  end
+
+  def get_adjusted_range(:venice_beach, turns_left) do
+    cond do
+      turns_left > 20  -> 0.8
+      turns_left > 15  -> 0.9
+      turns_left <= 15 -> 1.0
+    end
+  end
+
+  def get_adjusted_range(:hollywood, turns_left) do
+    cond do
+      turns_left > 20 -> 0.9
+      turns_left <= 15 -> 1.0
+    end
+  end
+
+  def get_adjusted_range(:compton, _turns_left), do: 1.0
+
+  def get_adjusted_range(_station, _turns_left), do: {:error, :invalid_station_name}
+
+  def get_price(quantity, cut) when quantity > 0 do
+    {:ok, current_price} = Cut.new(cut, quantity)
     current_price.price
   end
 
-  defp get_price(_quantity, _type), do: nil
+  def get_price(_quantity, _cut), do: nil
 
-  defp generate_quantity(type) do
-    Enum.random(0..max_quantities(type))
-  end
-
-  defp max_quantities(:flank), do: 20
-  defp max_quantities(:heart), do: 10
-  defp max_quantities(:liver), do: 100
-  defp max_quantities(:loin), do: 45
-  defp max_quantities(:ribs), do: 30
-  defp max_quantities(_), do: {:error, :invalid_cut_type}
 end
