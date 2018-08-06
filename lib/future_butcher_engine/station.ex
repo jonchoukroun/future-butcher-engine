@@ -4,78 +4,74 @@ defmodule FutureButcherEngine.Station do
   @enforce_keys [:station_name, :market]
   defstruct [:station_name, :market]
 
-  @stations [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
+  @stations %{
+    :beverly_hills => %{ :base_crime_rate => 1 },
+    :downtown      => %{ :base_crime_rate => 2 },
+    :venice_beach  => %{ :base_crime_rate => 3 },
+    :hollywood     => %{ :base_crime_rate => 4 },
+    :compton       => %{ :base_crime_rate => 5 }
+  }
 
-  def station_names, do: @stations
+  @station_names [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
 
-  def new(station, turns_left) when station in @stations do
+  def station_names, do: @station_names
+
+  def new(station, turns_left) when station in @station_names do
     %Station{
       station_name: station,
-      market: generate_market(station, turns_left),
+      market:       generate_market(station, turns_left),
     }
   end
 
-  def new(_), do: {:error, :invalid_station}
+  def new(_station, _turns_left), do: {:error, :invalid_station}
 
-  def generate_market(station, turns_left) do
+  defp generate_market(station, turns_left) do
     Map.new(Cut.cut_names, fn cut -> {cut, generate_cut(cut, station, turns_left)} end)
   end
 
-  def generate_cut(cut, station, turns_left) do
+  defp generate_cut(cut, station, turns_left) do
     quantity = generate_quantity(cut, station, turns_left)
     %{quantity: quantity, price: get_price(quantity, cut)}
   end
 
-  def generate_quantity(cut, station, turns_left) do
+  defp generate_quantity(cut, station, turns_left) do
     base_max = Cut.maximum_quantity(cut)
-    range    = get_adjusted_range(station, turns_left)
+    range    = generate_adjusted_range(station, turns_left)
     max      = base_max - (base_max * ((1 - range) / 2)) |> round()
     min      = base_max * ((1 - range) / 2) + 1 |> round()
     Enum.random(min..max)
   end
 
-  def get_adjusted_range(:beverly_hills, turns_left) do
-    cond do
-      turns_left > 20 -> 0.6
-      turns_left > 15 -> 0.7
-      turns_left > 10 -> 0.8
-      turns_left > 5  -> 0.9
-      turns_left <= 5 -> 1.0
-    end
-  end
-  def get_adjusted_range(:downtown, turns_left) do
-    cond do
-      turns_left > 20   -> 0.7
-      turns_left > 15   -> 0.8
-      turns_left > 10   -> 0.9
-      turns_left <= 10  -> 1.0
-    end
+  defp generate_adjusted_range(station, turns_left) when turns_left > 20 do
+    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.5)
   end
 
-  def get_adjusted_range(:venice_beach, turns_left) do
-    cond do
-      turns_left > 20  -> 0.8
-      turns_left > 15  -> 0.9
-      turns_left <= 15 -> 1.0
-    end
+  defp generate_adjusted_range(station, turns_left) when turns_left > 15 do
+    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.6)
   end
 
-  def get_adjusted_range(:hollywood, turns_left) do
-    cond do
-      turns_left > 20 -> 0.9
-      turns_left <= 15 -> 1.0
-    end
+  defp generate_adjusted_range(station, turns_left) when turns_left > 10 do
+    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.7)
   end
 
-  def get_adjusted_range(:compton, _turns_left), do: 1.0
+  defp generate_adjusted_range(station, turns_left) when turns_left > 5 do
+    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.8)
+  end
 
-  def get_adjusted_range(_station, _turns_left), do: {:error, :invalid_station_name}
+  defp generate_adjusted_range(station, turns_left) when turns_left <= 5 do
+    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.9)
+  end
 
-  def get_price(quantity, cut) when quantity > 0 do
+  defp generate_adjusted_range(_station, _turns_left), do: {:error, :invalid_station_values}
+
+  defp validate_range_value(range) when range > 1, do: 1.0
+  defp validate_range_value(range), do: range
+
+  defp get_price(quantity, cut) when quantity > 0 do
     {:ok, current_price} = Cut.new(cut, quantity)
     current_price.price
   end
 
-  def get_price(_quantity, _cut), do: nil
+  defp get_price(_quantity, _cut), do: nil
 
 end
