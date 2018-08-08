@@ -7,6 +7,8 @@ defmodule FutureButcherEngine.Game do
 
   @stations [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
 
+  @mugging_choices [:funds, :cuts]
+
   @turns 25
 
   # Temporarily set to full day during dev
@@ -57,6 +59,22 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, {:change_station, destination})
   end
 
+  def end_transit(game) do
+    GenServer.call(game, {:end_transit})
+  end
+
+  def mug_player(game, choice) do
+    GenServer.call(game, {:mug_player, choice})
+  end
+
+  def buy_pack(game, cost) do
+    GenServer.call(game, {:buy_pack, cost})
+  end
+
+  def buy_item(game, item, cost, weight) do
+    GenServer.call(game, {:buy_item, item, cost, weight})
+  end
+
 
   # GenServer callbacks
   def handle_info(:timeout, state_data) do
@@ -83,7 +101,7 @@ defmodule FutureButcherEngine.Game do
     with {:ok, rules} <- Rules.check(state_data.rules, :start_game)
     do
       state_data
-      |> update_rules(rules)
+      |> update_rules(decrement_turn(rules, 1))
       |> travel_to(:downtown)
       |> reply_success(:ok)
     else
@@ -152,12 +170,10 @@ defmodule FutureButcherEngine.Game do
   def handle_call({:change_station, destination}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :change_station),
                 {:ok} <- valid_destination?(
-                          state_data.station.station_name, destination),
-        {:ok, player} <- Player.accrue_debt(state_data.player)
+                          state_data.station.station_name, destination)
     do
       state_data
       |> update_rules(rules)
-      |> update_player(player)
       |> travel_to(destination)
       |> reply_success(:ok)
     else
@@ -166,6 +182,69 @@ defmodule FutureButcherEngine.Game do
       {:error, msg} -> reply_failure(state_data, msg)
     end
   end
+
+  def handle_call({:end_transit}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :end_transit),
+        {:ok, player} <- Player.accrue_debt(state_data.player)
+    do
+      state_data
+      |> update_rules(decrement_turn(rules, 1))
+      |> update_player(player)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+
+  def handle_call({:mug_player, :fight}, _from, state_data) do
+    with {:ok, rules}         <- Rules.check(state_data.rules, :mug_player),
+         {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left)
+    do
+      state_data
+      |> update_rules(decrement_turn(rules, turns_penalty))
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+
+  def handle_call({:mug_player, choice}, _from, state_data) when choice in @mugging_choices do
+    with {:ok, rules} <- Rules.check(state_data.rules, :mug_player),
+        {:ok, player} <- Player.mug_player(state_data.player, choice)
+    do
+      state_data
+      |> update_rules(rules)
+      |> update_player(player)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+  # def handle_call({:buy_pack, cost}, _from, state_data) do
+  #   with {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
+  #       {:ok, player} <- Player.buy_pack(state_data.player, cost)
+  #   do
+  #     state_data
+  #     |> update_rules(rules)
+  #     |> update_player(player)
+  #     |> reply_success(:ok)
+  #   else
+  #     {:error, msg} -> reply_failure(state_data, msg)
+  #   end
+  # end
+
+  # def handle_call({:buy_item, item, cost, weight}, _from, state_data) do
+  #   with {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
+  #       {:ok, player} <- Player.buy_item(state_data.player, item, cost, weight)
+  #   do
+  #     state_data
+  #     |> update_rules(rules)
+  #     |> update_player(player)
+  #     |> reply_success(:ok)
+  #   else
+  #     {:error, msg} -> reply_failure(state_data, msg)
+  #   end
+  # end
 
 
   # Validations
@@ -199,6 +278,11 @@ defmodule FutureButcherEngine.Game do
 
   # Computations
 
+  def generate_turns_penalty(turns_left) when turns_left <= 1, do: {:error, :too_few_turns_left}
+  def generate_turns_penalty(turns_left) do
+    {:ok, Enum.random(1..Enum.min([(turns_left - 1), 3]))}
+  end
+
   defp get_price(market, cut, amount) do
     if Map.get(market, cut) do
       {:ok, Map.get(market, cut).price * amount}
@@ -225,6 +309,10 @@ defmodule FutureButcherEngine.Game do
   defp update_player(state_data, player), do: %{state_data | player: player}
 
   defp update_rules(state_data, rules), do: %{state_data | rules: rules}
+
+  defp decrement_turn(rules, turns) do
+    rules |> Map.put(:turns_left, Map.get(rules, :turns_left) - turns)
+  end
 
   defp travel_to(state_data, station) do
     %{state_data | station: Station.new(station, state_data.rules.turns_left)}
