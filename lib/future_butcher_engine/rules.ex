@@ -17,7 +17,6 @@ defmodule FutureButcherEngine.Rules do
   end
 
   def check(%Rules{state: :initialized} = rules, :start_game) do
-    rules = decrement_turn(rules)
     {:ok, %Rules{rules | state: :in_game}}
   end
 
@@ -46,14 +45,25 @@ defmodule FutureButcherEngine.Rules do
   end
 
   def check(%Rules{state: :in_game} = rules, :change_station) do
-    rules = decrement_turn(rules)
+    {:ok, %Rules{rules | state: :in_transit}}
+  end
+
+  def check(%Rules{state: :in_transit} = rules, :end_transit) do
+    {:ok, %Rules{rules | state: :in_game}}
+  end
+
+  def check(%Rules{state: :in_transit} = rules, :mug_player) do
+    {:ok, %Rules{rules | state: :in_transit}}
+  end
+
+  def check(%Rules{state: :in_game} = rules, :buy_pack) do
+    {:ok, %Rules{rules | state: :in_game}}
+  end
+
+  def check(%Rules{state: :in_game} = rules, :buy_item) do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
   def check(_state, _action), do: {:error, :violates_current_rules}
-
-  defp decrement_turn(rules) do
-    rules |> Map.put(:turns_left, Map.get(rules, :turns_left) - 1)
-  end
 
 end
