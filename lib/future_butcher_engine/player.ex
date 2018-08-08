@@ -1,17 +1,15 @@
 defmodule FutureButcherEngine.Player do
   alias __MODULE__
 
-  @enforce_keys [:player_name, :health, :funds, :debt, :rate, :pack]
-  defstruct [:player_name, :health, :funds, :debt, :rate, :pack]
+  @enforce_keys [:player_name, :funds, :debt, :rate, :pack]
+  defstruct [:player_name, :funds, :debt, :rate, :pack]
 
-  @max_health 100
   @max_space 20
   @cut_keys [:flank, :heart, :loin, :liver, :ribs]
 
   def new(player_name) when is_binary(player_name) do
     %Player{
       player_name: player_name,
-      health: @max_health,
       funds: 0, debt: 0, rate: 0.0,
       pack: initialize_pack()}
   end
@@ -99,27 +97,26 @@ defmodule FutureButcherEngine.Player do
     {:ok, player |> increase_attribute(:funds, amount)}
   end
 
-  # def adjust_health(%Player{health: health} = player, :heal, amount)
-  # when amount + health > @max_health do
-  #   {:ok, player |> increase_attribute(:health, (@max_health - health))}
-  # end
-  #
-  # def adjust_health(player, :heal, amount) do
-  #   {:ok, player |> increase_attribute(:health, amount)}
-  # end
-  #
-  # def adjust_health(%Player{health: health}, :hurt, amount)
-  # when amount > health do
-  #     {:ok, :player_dead}
-  # end
-  #
-  # def adjust_health(player, :hurt, amount) do
-  #   {:ok, player |> decrease_attribute(:health, amount)}
-  # end
+  def mug_player(%Player{funds: funds}, :funds) when funds == 0 do
+    {:error, :insufficient_funds}
+  end
+
+  def mug_player(%Player{funds: funds} = player, :funds) do
+    funds_penalty = Enum.random(9..16) |> Kernel./(100) |> (fn(n) -> round(funds * n) end).()
+    {:ok, player |> decrease_attribute(:funds, funds_penalty)}
+  end
+
+  def mug_player(player, :cuts) do
+    # Handle no cuts -> beatdown on front end
+    # %{:heart, 2}
+  end
 
   defp initialize_pack do
     Map.new(@cut_keys, fn cut -> {cut, 0} end)
   end
+
+
+  # Validations
 
   defp sufficient_funds?(player, cost) do
     if (player.funds >= cost), do: {:ok}, else: {:error, :insufficient_funds}
@@ -144,6 +141,9 @@ defmodule FutureButcherEngine.Player do
       {:error, :insufficient_cuts}
     end
   end
+
+
+  # Property updates
 
   defp increase_cut(pack, cut, amount) do
     pack |> Map.put(cut, Map.get(pack, cut) + amount)
