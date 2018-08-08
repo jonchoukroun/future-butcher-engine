@@ -2,10 +2,9 @@ defmodule FutureButcherEngine.PlayerTest do
   use ExUnit.Case
   alias FutureButcherEngine.Player
 
-  test "New players created with full health, an empty pack, and no financials" do
+  test "New players created with an empty pack, and no financials" do
     player = Player.new("Frank")
     assert player.player_name == "Frank"
-    assert player.health      == 100
     assert player.funds       == 0
     assert player.debt        == 0
     assert player.rate        == 0
@@ -133,26 +132,4 @@ defmodule FutureButcherEngine.PlayerTest do
     assert Player.pay_debt(player, amount) == {:error, :insufficient_funds}
   end
 
-  # test "Hurting player by more than current health results in death" do
-  #   player = Player.new("Frank")
-  #   assert Player.adjust_health(player, 200, :hurt) == {:ok, :player_dead}
-  # end
-  #
-  # test "Healing player by more than max health returns max health" do
-  #   player = Player.new("Frank")
-  #   {:ok, player} = Player.adjust_health(player, 100, :heal)
-  #   assert player.health == 100
-  # end
-  #
-  # test "Hurting player decreases health by expected amount" do
-  #   player = Player.new("Frank")
-  #   {:ok, player} = Player.adjust_health(player, 20, :hurt)
-  #   assert player.health == 80
-  # end
-  #
-  # test "Healing player increases health by expected amount" do
-  #   player = Player.new("Frank")
-  #   {:ok, player} = Player.adjust_health(player, 20, :heal)
-  #   assert player.health == 60
-  # end
 end
