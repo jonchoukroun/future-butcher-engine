@@ -220,6 +220,7 @@ defmodule FutureButcherEngine.Game do
       {:error, msg} -> reply_failure(state_data, msg)
     end
   end
+  
   # def handle_call({:buy_pack, cost}, _from, state_data) do
   #   with {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
   #       {:ok, player} <- Player.buy_pack(state_data.player, cost)
