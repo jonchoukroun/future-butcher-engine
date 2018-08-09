@@ -106,9 +106,11 @@ defmodule FutureButcherEngine.Player do
     {:ok, player |> decrease_attribute(:funds, funds_penalty)}
   end
 
-  def mug_player(player, :cuts) do
-    # Handle no cuts -> beatdown on front end
-    # %{:heart, 2}
+  def mug_player(%Player{pack: pack} = player, :cuts) do
+    case get_random_cut(pack) do
+      {:ok, cut, amount} -> {:ok, player |> Map.put(:pack, decrease_cut(pack, cut, amount))}
+      :error             -> {:error, :no_cuts_owned}
+    end
   end
 
   defp initialize_pack do
@@ -117,6 +119,16 @@ defmodule FutureButcherEngine.Player do
 
 
   # Validations
+
+  defp get_random_cut(pack) do
+    owned_cuts = Enum.filter(pack, fn(cut) -> elem(cut, 1) > 0 end)
+    case Enum.count(owned_cuts) do
+      0  -> :error
+      _n ->
+        cut_penalty = Enum.random(owned_cuts)
+        {:ok, elem(cut_penalty, 0), elem(cut_penalty, 1)}
+    end
+  end
 
   defp sufficient_funds?(player, cost) do
     if (player.funds >= cost), do: {:ok}, else: {:error, :insufficient_funds}
