@@ -12,10 +12,9 @@ defmodule FutureButcherEngine.RulesTest do
   describe "Initialized game with valid number of turns" do
     setup do: {:ok, rules: %Rules{turns_left: 10, state: :initialized}}
 
-    test "Start game decrements turns and updates state", context do
+    test "Start game updates state", context do
       {:ok, rules} = Rules.check(context.rules, :start_game)
       assert rules.state == :in_game
-      assert rules.turns_left == 9
     end
   end
 
@@ -32,12 +31,11 @@ defmodule FutureButcherEngine.RulesTest do
     assert Rules.check(rules, :any_action) == {:error, :game_over}
   end
 
-  test "Change station returns in rules state and decrements turns left" do
+  test "Change station sets rules to in_transit" do
     rules = Rules.new(5)
     rules = %Rules{rules | state: :in_game}
     {:ok, rules} = Rules.check(rules, :change_station)
-    assert rules.state == :in_game
-    assert rules.turns_left == 4
+    assert rules.state == :in_transit
   end
 
   test "Failure to pass valid state or action returns generic error" do
