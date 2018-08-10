@@ -1,21 +1,30 @@
 defmodule FutureButcherEngine.Player do
   alias __MODULE__
 
-  @enforce_keys [:player_name, :funds, :debt, :rate, :pack]
-  defstruct [:player_name, :funds, :debt, :rate, :pack]
+  @enforce_keys [:player_name, :funds, :debt, :rate, :pack, :pack_space]
+  defstruct [:player_name, :funds, :debt, :rate, :pack, :pack_space]
 
-  @max_space 20
+  @base_space 20
   @cut_keys [:flank, :heart, :loin, :liver, :ribs]
 
   def new(player_name) when is_binary(player_name) do
     %Player{
       player_name: player_name,
       funds: 0, debt: 0, rate: 0.0,
-      pack: initialize_pack()}
+      pack: initialize_pack(),
+      pack_space: @base_space
+    }
   end
 
-  def new(_name) do
-    {:error, :invalid_player_name}
+  def new(_name), do: {:error, :invalid_player_name}
+
+  def buy_pack(%Player{funds: funds}, _, cost) when funds < cost, do: {:error, :insufficient_funds}
+
+  def buy_pack(%Player{pack_space: current_space}, new_space, _cost)
+  when current_space >= new_space, do: {:error, :no_pack_upgrade}
+
+  def buy_pack(player, pack_space, cost) do
+    adjust_funds(Map.put(player, :pack_space, pack_space), :decrease, cost)
   end
 
   def buy_loan(%Player{debt: debt, rate: rate}, _debt, _rate) when debt > 0 and rate > 0 do
@@ -37,24 +46,23 @@ defmodule FutureButcherEngine.Player do
     {:error, :invalid_loan_values}
   end
 
+  def buy_cut(%Player{funds: funds}, _cut, _amount, cost) when funds < cost do
+    {:error, :insufficient_funds}
+  end
+
   def buy_cut(player, cut, amount, cost) do
-    with {:ok} <- sufficient_funds?(player, cost),
-         {:ok} <- sufficient_space?(player, amount)
-     do
+    with {:ok} <- sufficient_space?(player, amount) do
       {:ok, player} = adjust_funds(player, :decrease, cost)
-      {:ok, player
-            |> Map.put(:pack, increase_cut(player.pack, cut, amount))}
+      {:ok, player |> Map.put(:pack, increase_cut(player.pack, cut, amount))}
     else
       {:error, msg} -> {:error, msg}
     end
   end
 
   def sell_cut(player, cut, amount, profit) do
-    with {:ok} <- sufficient_cuts?(player.pack, cut, amount)
-    do
+    with {:ok} <- sufficient_cuts?(player.pack, cut, amount) do
       {:ok, player} = adjust_funds(player, :increase, profit)
-      {:ok, player
-            |> Map.put(:pack, decrease_cut(player.pack, cut, amount))}
+      {:ok, player |> Map.put(:pack, decrease_cut(player.pack, cut, amount))}
     else
       {:error, msg} -> {:error, msg}
     end
@@ -84,8 +92,7 @@ defmodule FutureButcherEngine.Player do
 
   def pay_debt(_player, _amount), do: {:error, :insufficient_funds}
 
-  def adjust_funds(%Player{funds: funds} = player, :decrease, amount)
-  when amount > funds do
+  def adjust_funds(%Player{funds: funds} = player, :decrease, amount) when amount > funds do
     {:ok, player |> Map.put(:funds, 0)}
   end
 
@@ -130,8 +137,8 @@ defmodule FutureButcherEngine.Player do
     end
   end
 
-  defp sufficient_funds?(player, cost) do
-    if (player.funds >= cost), do: {:ok}, else: {:error, :insufficient_funds}
+  defp sufficient_funds?(funds, cost) do
+    if (funds >= cost), do: {:ok}, else: {:error, :insufficient_funds}
   end
 
   defp sufficient_space?(player, amount) do
