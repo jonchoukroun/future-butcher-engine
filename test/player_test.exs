@@ -64,7 +64,19 @@ defmodule FutureButcherEngine.PlayerTest do
 
     assert player.debt == debt * (1 + rate)
   end
-  
+
+  describe ".buy_cut" do
+    setup _context do
+      {:ok, player} = Player.new("Frank") |> adjust_funds(player, :increase, 5000)
+      %{player: player}
+    end
+
+    test "with insufficient funds returns error", context do
+      assert Player.buy_cut(context.player, :loin, 4, 10_000) == {:error, :insufficient_funds}
+    end
+
+  end
+
   # test "Buying with insufficient funds returns error" do
   #   player = Player.new("Frank")
   #   assert Player.buy_cut(player, :ribs, 20, 1300) == {:error, :insufficient_funds}
