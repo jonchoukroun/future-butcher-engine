@@ -37,32 +37,34 @@ defmodule FutureButcherEngine.PlayerTest do
 
   end
 
-  # test "Buying loan with integer rate converts to float and initialize finances" do
-  #   player = Player.new("Frank")
-  #   {:ok, player} = Player.buy_loan(player, 5000, 2)
-  #
-  #   assert player.funds == 5000
-  #   assert player.debt  == 5000
-  #   assert player.rate  == 2.0
-  # end
-  #
-  # test "Buying loan with existing debt return error" do
-  #   player = Player.new("Frank")
-  #   {:ok, player} = Player.buy_loan(player, 5000, 0.5)
-  #
-  #   assert Player.buy_loan(player, 1000, 0.1) == {:error, :already_has_debt}
-  # end
-  #
-  # test "Debt accrues on debt by rate rate" do
-  #   player = Player.new("Frank")
-  #   debt   = 5000
-  #   rate   = 0.5
-  #   {:ok, player} = Player.buy_loan(player, debt, rate)
-  #   {:ok, player} = Player.accrue_debt(player)
-  #
-  #   assert player.debt == debt * (1 + rate)
-  # end
-  #
+  describe ".buy_loan" do
+
+    setup _context do
+      %{player: Player.new("Frank")}
+    end
+
+    test "with loan rate as integer converts to float", context do
+      {:ok, test_player} = Player.buy_loan(context.player, 1000, 2)
+      assert test_player.debt == 1000
+      assert test_player.rate == 2.0
+    end
+
+    test "with existing debt returns error", context do
+      {:ok, test_player} = Player.buy_loan(context.player, 1000, 0.4)
+      assert Player.buy_loan(test_player, 1000, 0.25) == {:error, :already_has_debt}
+    end
+  end
+
+  test "Debt accrues on debt by rate rate" do
+    player = Player.new("Frank")
+    debt   = 5000
+    rate   = 0.5
+    {:ok, player} = Player.buy_loan(player, debt, rate)
+    {:ok, player} = Player.accrue_debt(player)
+
+    assert player.debt == debt * (1 + rate)
+  end
+  
   # test "Buying with insufficient funds returns error" do
   #   player = Player.new("Frank")
   #   assert Player.buy_cut(player, :ribs, 20, 1300) == {:error, :insufficient_funds}
