@@ -67,8 +67,8 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, {:mug_player, choice})
   end
 
-  def buy_pack(game, cost) do
-    GenServer.call(game, {:buy_pack, cost})
+  def buy_pack(game, pack_space, cost) do
+    GenServer.call(game, {:buy_pack, pack_space, cost})
   end
 
   def buy_item(game, item, cost, weight) do
@@ -220,19 +220,19 @@ defmodule FutureButcherEngine.Game do
       {:error, msg} -> reply_failure(state_data, msg)
     end
   end
-  
-  # def handle_call({:buy_pack, cost}, _from, state_data) do
-  #   with {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
-  #       {:ok, player} <- Player.buy_pack(state_data.player, cost)
-  #   do
-  #     state_data
-  #     |> update_rules(rules)
-  #     |> update_player(player)
-  #     |> reply_success(:ok)
-  #   else
-  #     {:error, msg} -> reply_failure(state_data, msg)
-  #   end
-  # end
+
+  def handle_call({:buy_pack, pack_space, cost}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
+        {:ok, player} <- Player.buy_pack(state_data.player, pack_space, cost)
+    do
+      state_data
+      |> update_rules(rules)
+      |> update_player(player)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
 
   # def handle_call({:buy_item, item, cost, weight}, _from, state_data) do
   #   with {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
