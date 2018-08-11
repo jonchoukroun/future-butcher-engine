@@ -146,7 +146,7 @@ defmodule FutureButcherEngine.Player do
     |> Map.values
     |> Enum.reduce(0, fn(x, acc) -> x + acc end)
 
-    if space_taken + amount <= @max_space do
+    if space_taken + amount <= player.pack_space do
       {:ok}
     else
       {:error, :insufficient_pack_space}
