@@ -68,6 +68,10 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
+  def check(%Rules{state: :in_game} = rules, :drop_weapon) do
+    {:ok, %Rules{rules | state: :in_game}}
+  end
+
   def check(_state, _action), do: {:error, :violates_current_rules}
 
 end
