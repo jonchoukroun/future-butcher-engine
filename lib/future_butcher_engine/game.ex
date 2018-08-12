@@ -88,10 +88,17 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, {:get_weapons_menu})
   end
 
-  def buy_weapon(game, weapon, cost) do
-    GenServer.call(game, {:buy_weapon, weapon, cost})
+  def buy_weapon(game, weapon) do
+    GenServer.call(game, {:buy_weapon, weapon})
   end
 
+  def replace_weapon(game, weapon) do
+    GenServer.call(game, {:replace_weapon, weapon})
+  end
+
+  def drop_weapon(game) do
+    GenServer.call(game, {:drop_weapon})
+  end
 
   # GenServer callbacks ========================================================
 
@@ -162,7 +169,7 @@ defmodule FutureButcherEngine.Game do
   def handle_call({:buy_cut, cut, amount}, _from, state_data) do
     with  {:ok, rules} <- Rules.check(state_data.rules, :buy_cut),
                  {:ok} <- valid_amount?(state_data.station.market, cut, amount),
-           {:ok, cost} <- get_price(state_data.station.market, cut, amount),
+           {:ok, cost} <- get_cut_price(state_data.station.market, cut, amount),
          {:ok, player} <- Player.buy_cut(state_data.player, cut, amount, cost)
     do
       state_data
@@ -178,7 +185,7 @@ defmodule FutureButcherEngine.Game do
   def handle_call({:sell_cut, cut, amount}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :sell_cut),
                 {:ok} <- cuts_owned?(state_data.player.pack, cut, amount),
-        {:ok, profit} <- get_price(state_data.station.market, cut, amount),
+        {:ok, profit} <- get_cut_price(state_data.station.market, cut, amount),
         {:ok, player} <- Player.sell_cut(state_data.player, cut, amount, profit)
     do
       state_data
@@ -264,8 +271,9 @@ defmodule FutureButcherEngine.Game do
 
   # Weapons --------------------------------------------------------------------
 
-  def handle_call({:buy_weapon, weapon, cost}, _from, state_data) do
+  def handle_call({:buy_weapon, weapon}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :buy_weapon),
+          {:ok, cost} <- get_weapon_price(state_data.station.store, weapon, :cost),
         {:ok, player} <- Player.buy_weapon(state_data.player, weapon, cost)
     do
       state_data
@@ -277,8 +285,11 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def handle_call({:replace_weapon, weapon, cost, value}, _from, state_data) do
+  def handle_call({:replace_weapon, weapon}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :replace_weapon),
+          {:ok, cost} <- get_weapon_price(state_data.station.store, weapon, :cost),
+         {:ok, value} <-
+           get_weapon_price(state_data.station.store, state_data.player.weapon, :value),
         {:ok, player} <- Player.replace_weapon(state_data.player, weapon, cost, value)
     do
       state_data
@@ -290,6 +301,19 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
+  def handle_call({:drop_weapon}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :drop_weapon),
+        {:ok, player} <- Player.drop_weapon(state_data.player)
+    do
+      state_data
+      |> update_rules(rules)
+      |> update_player(player)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+
+  end
 
   # Validations ================================================================
 
@@ -327,7 +351,20 @@ defmodule FutureButcherEngine.Game do
     {:ok, Enum.random(1..Enum.min([(turns_left - 1), 3]))}
   end
 
-  defp get_price(market, cut, amount) do
+  defp get_weapon_price(store, weapon, :cost) do
+    if Map.get(store, weapon) do
+      {:ok, Map.get(store, weapon).price}
+    else
+      {:error, :not_for_sale}
+    end
+  end
+
+  defp get_weapon_price(store, weapon, :value) do
+    item = Map.get(store, weapon)
+    if item, do: {:ok, item.price}, else: {:ok, 0}
+  end
+
+  defp get_cut_price(market, cut, amount) do
     if Map.get(market, cut) do
       {:ok, Map.get(market, cut).price * amount}
     else
