@@ -6,7 +6,7 @@ defmodule FutureButcherEngine.Player do
 
   @base_space  20
   @cut_keys    [:flank, :heart, :loin, :liver, :ribs]
-  @weapon_type [:bat, :brass_knuckles, :knife, :machete]
+  @weapon_type [:axe, :bat, :blackjack, :brass_knuckles, :machete]
 
 
   # New player ----------------------------------------------------------------
@@ -153,6 +153,9 @@ defmodule FutureButcherEngine.Player do
       {:error, msg} -> {:error, msg}
     end
   end
+
+  def drop_weapon(%Player{weapon: nil}), do: {:error, :no_weapon_owned}
+  def drop_weapon(player), do: {:ok, player |> Map.replace!(:weapon, nil)}
 
 
   # Muggings -------------------------------------------------------------------
