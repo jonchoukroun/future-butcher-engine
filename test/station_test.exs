@@ -2,16 +2,35 @@ defmodule FutureButcherEngine.StationTest do
   use ExUnit.Case
   alias FutureButcherEngine.Station
 
-  test "Invalid station name returns error" do
-    assert Station.new(:bullshit_name, 25) == {:error, :invalid_station}
+  describe ".new - venice beach" do
+    setup _context do
+      %{station: Station.new(:venice_beach, 24)}
+    end
+
+    test "generates store", context do
+      assert is_map(context.station.store)
+    end
   end
 
-  test "Valid station name creates station with market quantities and values" do
-    station = Station.new(:downtown, 25)
-    assert station.station_name == :downtown
-    assert is_map(station.market)
-    assert Map.keys(station.market.flank) == [:price, :quantity]
-    assert station.market |> Map.keys() |> Enum.count() == 5
+  describe ".new - other stations" do
+    setup _context do
+      %{station: Station.new(:hollywood, 24)}
+    end
+
+    test "generates market quantities and values", context do
+      assert context.station.station_name == :hollywood
+      assert is_map(context.station.market)
+      assert Map.keys(context.station.market.flank) == [:price, :quantity]
+      assert context.station.market |> Map.keys() |> Enum.count() == 5
+    end
+
+    test "does not generate a store", context do
+      assert context.station.store == nil
+    end
+  end
+
+  test ".new - invalid station name" do
+    assert Station.new(:bullshit_name, 25) == {:error, :invalid_station}
   end
 
   test "Market generated at low crime station in early game is reduced in range" do
