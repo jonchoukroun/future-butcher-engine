@@ -160,7 +160,7 @@ defmodule FutureButcherEngine.PlayerTest do
 
     test "with insufficient funds returns error", context do
       {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 2000)
-      assert Player.buy_weapon(test_player, :knife, 2000) == {:error, :insufficient_funds}
+      assert Player.buy_weapon(test_player, :axe, 2000) == {:error, :insufficient_funds}
     end
 
     test "with invalid weapon type returns error", context do
@@ -175,7 +175,7 @@ defmodule FutureButcherEngine.PlayerTest do
     end
 
     test "returns error", context do
-      assert Player.buy_weapon(context.player, :knife, 0) == {:error, :already_owns_weapon}
+      assert Player.buy_weapon(context.player, :axe, 0) == {:error, :already_owns_weapon}
     end
   end
 
@@ -197,7 +197,7 @@ defmodule FutureButcherEngine.PlayerTest do
     end
 
     test "with insufficient funds + trade-in value returns error", context do
-      assert Player.replace_weapon(context.player, :knife, 6000, 100) ==
+      assert Player.replace_weapon(context.player, :axe, 6000, 100) ==
         {:error, :insufficient_funds}
     end
 
@@ -206,14 +206,14 @@ defmodule FutureButcherEngine.PlayerTest do
     end
 
     test "with cheaper weapon than current weapon replaces weapon and adjusts funds", context do
-      {:ok, test_player} = Player.replace_weapon(context.player, :knife, 500, 200)
-      assert test_player.weapon == :knife
+      {:ok, test_player} = Player.replace_weapon(context.player, :axe, 500, 200)
+      assert test_player.weapon == :axe
       assert test_player.funds  == 3700
     end
 
     test "with valid args replaces weapon and adjusts funds", context do
-      {:ok, test_player} = Player.replace_weapon(context.player, :knife, 1000, 200)
-      assert test_player.weapon == :knife
+      {:ok, test_player} = Player.replace_weapon(context.player, :axe, 1000, 200)
+      assert test_player.weapon == :axe
       assert test_player.funds  == 3200
     end
 
@@ -221,8 +221,8 @@ defmodule FutureButcherEngine.PlayerTest do
       {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 4000)
       assert test_player.funds == 0
 
-      {:ok, test_player} = Player.replace_weapon(test_player, :knife, 500, 1000)
-      assert test_player.weapon == :knife
+      {:ok, test_player} = Player.replace_weapon(test_player, :axe, 500, 1000)
+      assert test_player.weapon == :axe
       assert test_player.funds  == 500
     end
   end
