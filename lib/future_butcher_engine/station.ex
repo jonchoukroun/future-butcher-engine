@@ -1,8 +1,8 @@
 defmodule FutureButcherEngine.Station do
-  alias FutureButcherEngine.{Cut, Station}
+  alias FutureButcherEngine.{Cut, Station, Weapon}
 
-  @enforce_keys [:station_name, :market]
-  defstruct [:station_name, :market]
+  @enforce_keys [:station_name, :market, :store]
+  defstruct [:station_name, :market, :store]
 
   @stations %{
     :beverly_hills => %{ :base_crime_rate => 1 },
@@ -16,14 +16,43 @@ defmodule FutureButcherEngine.Station do
 
   def station_names, do: @station_names
 
+  def new(station, turns_left) when station == :venice_beach do
+    %Station{
+      station_name: station,
+      market:       generate_market(station, turns_left),
+      store:        generate_store(turns_left)
+    }
+  end
+
   def new(station, turns_left) when station in @station_names do
     %Station{
       station_name: station,
       market:       generate_market(station, turns_left),
+      store:        nil
     }
   end
 
   def new(_station, _turns_left), do: {:error, :invalid_station}
+
+
+  # Store ----------------------------------------------------------------------
+
+  defp generate_store(turns_left) do
+    select_available_weapons(Weapon.weapon_names)
+    |> Enum.map(fn weapon -> {weapon, %{
+        price: Weapon.get_price(weapon, turns_left),
+        weight: Weapon.get_weight(weapon)
+        }} end)
+    |> Map.new()
+  end
+
+  defp select_available_weapons(weapons) do
+    weapons
+    |> Enum.reject(fn _weapon -> Enum.random(1..10) < 6 end)
+  end
+
+
+  # Market ---------------------------------------------------------------------
 
   defp generate_market(station, turns_left) do
     Map.new(Cut.cut_names, fn cut -> {cut, generate_cut(cut, station, turns_left)} end)
