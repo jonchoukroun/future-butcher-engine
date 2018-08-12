@@ -60,7 +60,11 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
-  def check(%Rules{state: :in_game} = rules, :buy_item) do
+  def check(%Rules{state: :in_game} = rules, :buy_weapon) do
+    {:ok, %Rules{rules | state: :in_game}}
+  end
+
+  def check(%Rules{state: :in_game} = rules, :replace_weapon) do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
