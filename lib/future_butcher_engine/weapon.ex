@@ -1,9 +1,6 @@
 defmodule FutureButcherEngine.Weapon do
   alias __MODULE__
 
-  @enforce_keys [:type, :damage, :weight]
-  defstruct [:type, :damage, :weight]
-
   @weapons %{
     :brass_knuckles => %{:damage => 3, :weight => 1},
     :blackjack      => %{:damage => 6, :weight => 3},
