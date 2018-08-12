@@ -1,18 +1,20 @@
 defmodule FutureButcherEngine.Player do
-  alias __MODULE__
+  alias FutureButcherEngine.{Player, Weapon}
 
-  @enforce_keys [:player_name, :funds, :debt, :rate, :pack, :pack_space]
-  defstruct [:player_name, :funds, :debt, :rate, :pack, :pack_space]
+  @enforce_keys [:player_name, :funds, :debt, :rate, :pack, :pack_space, :weapon]
+  defstruct     [:player_name, :funds, :debt, :rate, :pack, :pack_space, :weapon]
 
-  @base_space 20
-  @cut_keys [:flank, :heart, :loin, :liver, :ribs]
+  @base_space  20
+  @cut_keys    [:flank, :heart, :loin, :liver, :ribs]
+  @weapon_type [:bat, :brass_knuckles, :knife, :machete]
 
   def new(player_name) when is_binary(player_name) do
     %Player{
       player_name: player_name,
       funds: 0, debt: 0, rate: 0.0,
       pack: initialize_pack(),
-      pack_space: @base_space
+      pack_space: @base_space,
+      weapon: nil
     }
   end
 
@@ -67,6 +69,22 @@ defmodule FutureButcherEngine.Player do
       {:error, msg} -> {:error, msg}
     end
   end
+
+  def buy_weapon(%Player{funds: funds}, _weapon, cost) when funds < cost do
+    {:error, :insufficient_funds}
+  end
+
+  def buy_weapon(player, weapon, cost) when weapon in @weapon_type do
+    weapon_weight = Weapon.get_weapon_weight(weapon)
+    with {:ok} <- sufficient_space?(player, weapon_weight) do
+      {:ok, player} = adjust_funds(player, :decrease, cost)
+      {:ok, player |> Map.put(:weapon, weapon)}
+    else
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def buy_weapon(_player, _weapon, _cost), do: {:error, :invalid_weapon_type}
 
   def accrue_debt(%Player{debt: debt, rate: rate} = player) when debt > 0 do
     new_debt =
@@ -146,7 +164,9 @@ defmodule FutureButcherEngine.Player do
     |> Map.values
     |> Enum.reduce(0, fn(x, acc) -> x + acc end)
 
-    if space_taken + amount <= player.pack_space do
+    weapon_weight = if player.weapon, do: Weapon.get_weapon_weight(player.weapon), else: 0
+
+    if space_taken + weapon_weight + amount <= player.pack_space do
       {:ok}
     else
       {:error, :insufficient_pack_space}
