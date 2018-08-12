@@ -2,17 +2,40 @@ defmodule FutureButcherEngine.PlayerTest do
   use ExUnit.Case
   alias FutureButcherEngine.Player
 
-  test "New players created with an empty pack, and no capital" do
+  test "New players created with an empty pack, and no capital or weapon" do
     player = Player.new("Frank")
     assert player.player_name == "Frank"
     assert player.funds       == 0
     assert player.debt        == 0
     assert player.rate        == 0
     assert player.pack_space  == 20
+    assert player.weapon      == nil
 
     player.pack
     |> Map.keys()
     |> Enum.each(fn (c) -> assert(Map.fetch!(player.pack, c) == 0) end)
+  end
+
+  describe ".buy_weapon with no current weapon" do
+    setup _context do
+      {:ok, player} = Player.new("Frank") |> Player.adjust_funds(:increase, 3000)
+      %{player: player}
+    end
+
+    test "with sufficient funds and pack space adds weapon and decreases funds", context do
+      {:ok, test_player } = Player.buy_weapon(context.player, :machete, 1000)
+      assert test_player.funds  == 2000
+      assert test_player.weapon == :machete
+    end
+
+    test "with insufficient funds returns error", context do
+      {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 2000)
+      assert Player.buy_weapon(test_player, :knife, 2000) == {:error, :insufficient_funds}
+    end
+
+    test "with invalid weapon type returns error", context do
+      assert Player.buy_weapon(context.player, :cat, 100) == {:error, :invalid_weapon_type}
+    end
   end
 
   describe ".buy_pack" do
@@ -157,5 +180,5 @@ defmodule FutureButcherEngine.PlayerTest do
     end
 
   end
-  
+
 end
