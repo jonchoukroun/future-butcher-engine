@@ -37,8 +37,8 @@ defmodule FutureButcherEngine.Station do
 
   # Store ----------------------------------------------------------------------
 
-  defp generate_store(turns_left) do
-    select_available_weapons(Weapon.weapon_names)
+  def generate_store(turns_left) do
+    select_available_weapons(Weapon.weapon_types)
     |> Enum.map(fn weapon -> {weapon, %{
         price: Weapon.generate_price(weapon, turns_left),
         weight: Weapon.get_weight(weapon)
