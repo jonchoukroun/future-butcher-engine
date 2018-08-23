@@ -160,7 +160,7 @@ defmodule FutureButcherEngine.PlayerTest do
 
     test "with insufficient funds returns error", context do
       {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 2000)
-      assert Player.buy_weapon(test_player, :axe, 2000) == {:error, :insufficient_funds}
+      assert Player.buy_weapon(test_player, :machete, 2000) == {:error, :insufficient_funds}
     end
 
     test "with invalid weapon type returns error", context do
@@ -170,12 +170,12 @@ defmodule FutureButcherEngine.PlayerTest do
 
   describe ".buy_weapon with existing weapon" do
     setup _context do
-      {:ok, player} = Player.new("Frank") |> Player.buy_weapon(:bat, 0)
+      {:ok, player} = Player.new("Frank") |> Player.buy_weapon(:hedge_clippers, 0)
       %{player: player}
     end
 
     test "returns error", context do
-      assert Player.buy_weapon(context.player, :axe, 0) == {:error, :already_owns_weapon}
+      assert Player.buy_weapon(context.player, :box_cutter, 0) == {:error, :already_owns_weapon}
     end
   end
 
@@ -185,35 +185,36 @@ defmodule FutureButcherEngine.PlayerTest do
     end
 
     test "returns error", context do
-      assert Player.replace_weapon(context.player, :bat, 0, 0) == {:error, :no_weapon_owned}
+      assert Player.replace_weapon(context.player, :machete, 0, 0) == {:error, :no_weapon_owned}
     end
   end
 
   describe ".replace_weapon with existing weapon" do
     setup _context do
       {:ok, player} = Player.new("Frank") |> Player.adjust_funds(:increase, 5000)
-      {:ok, player} = Player.buy_weapon(player, :bat, 1000)
+      {:ok, player} = Player.buy_weapon(player, :box_cutter, 1000)
       %{player: player}
     end
 
     test "with insufficient funds + trade-in value returns error", context do
-      assert Player.replace_weapon(context.player, :axe, 6000, 100) ==
+      assert Player.replace_weapon(context.player, :hedge_clippers, 6000, 100) ==
         {:error, :insufficient_funds}
     end
 
     test "with same weapon as current weapon returns error", context do
-      assert Player.replace_weapon(context.player, :bat, 0, 0) == {:error, :same_weapon_type}
+      assert Player.replace_weapon(context.player, :box_cutter, 0, 0) ==
+        {:error, :same_weapon_type}
     end
 
     test "with cheaper weapon than current weapon replaces weapon and adjusts funds", context do
-      {:ok, test_player} = Player.replace_weapon(context.player, :axe, 500, 200)
-      assert test_player.weapon == :axe
+      {:ok, test_player} = Player.replace_weapon(context.player, :brass_knuckles, 500, 200)
+      assert test_player.weapon == :brass_knuckles
       assert test_player.funds  == 3700
     end
 
     test "with valid args replaces weapon and adjusts funds", context do
-      {:ok, test_player} = Player.replace_weapon(context.player, :axe, 1000, 200)
-      assert test_player.weapon == :axe
+      {:ok, test_player} = Player.replace_weapon(context.player, :machete, 1000, 200)
+      assert test_player.weapon == :machete
       assert test_player.funds  == 3200
     end
 
@@ -221,8 +222,8 @@ defmodule FutureButcherEngine.PlayerTest do
       {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 4000)
       assert test_player.funds == 0
 
-      {:ok, test_player} = Player.replace_weapon(test_player, :axe, 500, 1000)
-      assert test_player.weapon == :axe
+      {:ok, test_player} = Player.replace_weapon(test_player, :hedge_clippers, 500, 1000)
+      assert test_player.weapon == :hedge_clippers
       assert test_player.funds  == 500
     end
   end
