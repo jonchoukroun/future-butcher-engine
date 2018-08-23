@@ -231,10 +231,12 @@ defmodule FutureButcherEngine.Game do
   end
 
   def handle_call({:mug_player, :fight}, _from, state_data) do
-    with {:ok, rules}         <- Rules.check(state_data.rules, :mug_player),
-         {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left)
+    with {:ok, rules}           <- Rules.check(state_data.rules, :mug_player),
+         {:ok, player, outcome} <- Player.mug_player(state_data.player, :fight),
+         {:ok, turns_penalty}   <- generate_turns_penalty(state_data.rules.turns_left, outcome)
     do
       state_data
+      |> update_player(player)
       |> update_rules(decrement_turn(rules, turns_penalty))
       |> reply_success(:ok)
     else
@@ -346,10 +348,16 @@ defmodule FutureButcherEngine.Game do
 
   # Computations ===============================================================
 
-  def generate_turns_penalty(turns_left) when turns_left <= 1, do: {:error, :not_enough_turns}
-  def generate_turns_penalty(turns_left) do
+  defp generate_turns_penalty(_turns, :victory), do: {:ok, 0}
+
+  defp generate_turns_penalty(turns_left, :defeat)
+  when turns_left <= 1, do: {:error, :not_enough_turns}
+
+  defp generate_turns_penalty(turns_left, :defeat) do
     {:ok, Enum.random(1..Enum.min([(turns_left - 1), 3]))}
   end
+
+  defp generate_turns_penalty(_turns_left, _outcome), do: {:error, :invalid_outcome}
 
   defp get_weapon_price(store, weapon, :cost) do
     if Map.get(store, weapon) do
