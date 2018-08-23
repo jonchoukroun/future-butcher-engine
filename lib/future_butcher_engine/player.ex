@@ -6,7 +6,7 @@ defmodule FutureButcherEngine.Player do
 
   @base_space  20
   @cut_keys    [:flank, :heart, :loin, :liver, :ribs]
-  @weapon_type [:axe, :bat, :blackjack, :brass_knuckles, :machete]
+  @weapon_type [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
 
 
   # New player ----------------------------------------------------------------
@@ -176,6 +176,19 @@ defmodule FutureButcherEngine.Player do
     end
   end
 
+  def mug_player(%Player{weapon: nil} = player, :fight), do: {:ok, player, :defeat}
+
+  def mug_player(player, :fight) do
+    case Weapon.get_damage(player.weapon) <= Enum.random(1..10) do
+      true ->
+        harvest = harvest_mugger(player.weapon)
+        |> Enum.reduce(player.pack, fn cut, pack -> increase_cut(pack, cut, 1) end)
+        {:ok, player |> Map.put(:pack, harvest), :victory}
+      false ->
+        {:ok, player, :defeat}
+    end
+  end
+
   def mug_player(_player, _response), do: {:error, :invalid_mugging_response}
 
 
@@ -230,6 +243,11 @@ defmodule FutureButcherEngine.Player do
 
 
   # Property updates -----------------------------------------------------------
+
+  defp harvest_mugger(weapon) do
+    Weapon.get_cuts(weapon)
+    |> Enum.reject(fn(_cut) -> Enum.random(0..10) >= 4 end)
+  end
 
   defp increase_cut(pack, cut, amount) do
     pack |> Map.put(cut, Map.get(pack, cut) + amount)
