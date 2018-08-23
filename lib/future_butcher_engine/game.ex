@@ -354,7 +354,7 @@ defmodule FutureButcherEngine.Game do
   when turns_left <= 1, do: {:error, :not_enough_turns}
 
   defp generate_turns_penalty(turns_left, :defeat) do
-    {:ok, Enum.random(1..Enum.min([(turns_left - 1), 3]))}
+    {:ok, Enum.random(2..Enum.min([(turns_left - 1), 4]))}
   end
 
   defp generate_turns_penalty(_turns_left, _outcome), do: {:error, :invalid_outcome}
