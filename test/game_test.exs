@@ -181,13 +181,8 @@ defmodule GameTest do
       {:ok, game} = GameSupervisor.start_game("Frank")
       Game.start_game(game)
 
-      {:ok, state} = Game.change_station(game, :compton)
-
-      {:ok, armed_player} = Player.buy_weapon state.player, :bat, 0
-      starting_state      = Map.put(state, :player, armed_player)
-      :sys.replace_state game, fn(_state) -> starting_state end
-
-      {:ok, test_state} = Game.mug_player(game, :fight)
+      {:ok, starting_state} = Game.change_station(game, :compton)
+      {:ok, test_state}     = Game.mug_player(game, :fight)
 
       on_exit fn ->
         GameSupervisor.stop_game "Frank"
@@ -198,6 +193,32 @@ defmodule GameTest do
 
     test "decrements turns", context do
       assert context.starting_state.rules.turns_left > context.test_state.rules.turns_left
+    end
+
+    test "state remains unchanged", context do
+      assert context.test_state.rules.state == :in_transit
+    end
+  end
+
+  describe ".mug_player :fight - with a weapon" do
+    setup _context do
+      {:ok, game} = GameSupervisor.start_game("Frank")
+      Game.start_game(game)
+
+      {:ok, state} = Game.change_station(game, :compton)
+
+      {:ok, armed_player} = Player.buy_weapon(state.player, :machete, 0)
+      starting_state      = Map.put(state, :player, armed_player)
+      :sys.replace_state game, fn(_state) -> starting_state end
+
+
+      {:ok, test_state}     = Game.mug_player(game, :fight)
+
+      on_exit fn ->
+        GameSupervisor.stop_game "Frank"
+      end
+
+      %{starting_state: starting_state, test_state: test_state}
     end
 
     test "state remains unchanged", context do
