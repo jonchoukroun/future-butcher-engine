@@ -69,10 +69,6 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, {:change_station, destination})
   end
 
-  def end_transit(game) do
-    GenServer.call(game, {:end_transit})
-  end
-
   def mug_player(game, choice) do
     GenServer.call(game, {:mug_player, choice})
   end
@@ -202,30 +198,17 @@ defmodule FutureButcherEngine.Game do
   # Travel/transit -------------------------------------------------------------
 
   def handle_call({:change_station, destination}, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :change_station),
-                {:ok} <- valid_destination?(
-                          state_data.station.station_name, destination)
+    with         {:ok} <- valid_destination?(state_data.station.station_name, destination),
+        {:ok, outcome} <- initiate_random_occurence(state_data, destination),
+          {:ok, rules} <- Rules.check(state_data.rules, outcome)
     do
       state_data
-      |> update_rules(rules)
+      |> update_rules(decrement_turn(rules, 1))
       |> travel_to(destination)
       |> reply_success(:ok)
     else
       {:game_over, rules} ->
         state_data |> update_rules(rules) |> reply_success(:game_over)
-      {:error, msg} -> reply_failure(state_data, msg)
-    end
-  end
-
-  def handle_call({:end_transit}, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :end_transit),
-        {:ok, player} <- Player.accrue_debt(state_data.player)
-    do
-      state_data
-      |> update_rules(decrement_turn(rules, 1))
-      |> update_player(player)
-      |> reply_success(:ok)
-    else
       {:error, msg} -> reply_failure(state_data, msg)
     end
   end
@@ -347,6 +330,10 @@ defmodule FutureButcherEngine.Game do
 
 
   # Computations ===============================================================
+
+  def initiate_random_occurence(state_data, destination) do
+    {:ok, Enum.random([:mugging, :end_transit])}
+  end
 
   defp generate_turns_penalty(_turns, :victory), do: {:ok, 0}
 
