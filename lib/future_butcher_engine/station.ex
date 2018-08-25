@@ -16,6 +16,11 @@ defmodule FutureButcherEngine.Station do
 
   def station_names, do: @station_names
 
+  def get_base_crime_rate(station) when station in @station_names do
+    @stations[station].base_crime_rate
+  end
+  def get_base_crime_rate(_station), do: {:error, :invalid_station}
+
   def new(station, turns_left) when station == :venice_beach do
     %Station{
       station_name: station,
