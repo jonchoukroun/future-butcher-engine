@@ -231,7 +231,57 @@ defmodule FutureButcherEngine.PlayerTest do
 
   # Muggings -------------------------------------------------------------------
 
-  describe ".mug_player funds" do
+  describe ".fight_mugger" do
+    setup _context do
+      %{player: Player.new("Frank")}
+    end
+
+    test "with no weapon returns defeat", context do
+      assert Player.fight_mugger(context.player) == {:ok, context.player, :defeat}
+    end
+
+    test "with a weapon returns defeat or victory", context do
+      {:ok, test_player} = Player.buy_weapon(context.player, :machete, 0)
+      case Player.fight_mugger(test_player) do
+        {:ok, player, :defeat} ->
+          assert player === test_player
+        {:ok, player, :victory} ->
+          starting_cuts = Enum.reduce(test_player.pack, 0, fn(cut, acc) -> acc + elem(cut, 1) end)
+          test_cuts     = Enum.reduce(player.pack, 0, fn(cut, acc) -> acc + elem(cut, 1) end)
+
+          assert test_cuts >= starting_cuts
+      end
+    end
+  end
+
+  describe ".pay_mugger :cuts" do
+    setup _context do
+      %{player: Player.new("Frank")}
+    end
+
+    test "with no cuts returns error", context do
+      assert Player.pay_mugger(context.player, :cuts) == {:error, :no_cuts_owned}
+    end
+
+    test "with 1 cut type removes all cuts", context do
+      {:ok, test_player} = Player.buy_cut(context.player, :heart, 3, 0)
+      {:ok, test_player} = Player.pay_mugger(test_player, :cuts)
+      assert test_player.pack.heart == 0
+    end
+
+    test "with multiple cut types owned removes all of 1 cut type", context do
+      {:ok, player} = Player.buy_cut(context.player, :heart, 3, 0)
+      {:ok, player} = Player.buy_cut(player, :loin, 2, 0)
+      {:ok, player} = Player.buy_cut(player, :ribs, 1, 0)
+
+      {:ok, test_player} = Player.pay_mugger(player, :cuts)
+      assert Map.keys(test_player.pack)
+              |> Enum.filter(fn cut -> test_player.pack[cut] > 0 end)
+              |> Enum.count == 2
+    end
+  end
+
+  describe ".pay_mugger :funds" do
     setup _context do
       {:ok, player} = Player.new("Frank") |> Player.adjust_funds(:increase, 1000)
       %{player: player}
@@ -239,48 +289,26 @@ defmodule FutureButcherEngine.PlayerTest do
 
     test "with no funds returns error", context do
       {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 1000)
-      assert Player.mug_player(test_player, :funds) == {:error, :insufficient_funds}
+      assert Player.pay_mugger(test_player, :funds) == {:error, :insufficient_funds}
     end
 
-    test "with funds decreases funds", context do
-      {:ok, test_player} = Player.mug_player(context.player, :funds)
-      assert test_player.funds < context.player.funds
-    end
-  end
-
-  describe ".mug_player cuts" do
-    setup _context do
-      %{player: Player.new("Frank")}
+    test "with funds decreases player's funds", context do
+      {:ok, test_player} = Player.pay_mugger(context.player, :funds)
+      assert context.player.funds > test_player.funds
     end
 
-    test "with no cuts returns error", context do
-      assert Player.mug_player(context.player, :cuts) == {:error, :no_cuts_owned}
-    end
-
-    test "with 1 cut type owned removes all cuts", context do
-      {:ok, test_player} = Player.buy_cut(context.player, :heart, 3, 0)
-      {:ok, test_player} = Player.mug_player(test_player, :cuts)
-      assert test_player.pack.heart == 0
-    end
-
-    test "with multiple cut types owned removes all of 1 cut type", context do
-      {:ok, player} = Player.buy_cut(context.player, :heart, 3, 0)
-      {:ok, player} = Player.buy_cut(player, :loin, 2, 0)
-      {:ok, player} = Player.buy_cut(player, :ribs, 5, 0)
-
-      {:ok, test_player} = Player.mug_player(player, :cuts)
-      assert Map.keys(test_player.pack)
-             |> Enum.filter(fn(cut) -> test_player.pack[cut] > 0 end)
-             |> Enum.count == 2
+    test "does not decrease cuts", context do
+      {:ok, test_player} = Player.pay_mugger(context.player, :funds)
+      assert test_player.pack === context.player.pack
     end
   end
 
-  describe ".mug_player" do
-    test "with invalid mugging response" do
-      player = Player.new "Frank"
-      assert Player.mug_player(player, :fish) == {:error, :invalid_mugging_response}
+  describe ".pay_mugger :fish" do
+    test "with invalid payoff type" do
+      assert Player.pay_mugger(Player.new("Frank"), :fish) == {:error, :invalid_mugging_response}
     end
   end
+
 
   # Funds ----------------------------------------------------------------------
 
