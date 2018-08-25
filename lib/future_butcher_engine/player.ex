@@ -160,25 +160,9 @@ defmodule FutureButcherEngine.Player do
 
   # Muggings -------------------------------------------------------------------
 
-  def mug_player(%Player{funds: funds}, :funds) when funds == 0 do
-    {:error, :insufficient_funds}
-  end
+  def fight_mugger(%Player{weapon: nil} = player), do: {:ok, player, :defeat}
 
-  def mug_player(%Player{funds: funds} = player, :funds) do
-    funds_penalty = Enum.random(9..16) |> Kernel./(100) |> (fn(n) -> round(funds * n) end).()
-    {:ok, player |> decrease_attribute(:funds, funds_penalty)}
-  end
-
-  def mug_player(%Player{pack: pack} = player, :cuts) do
-    case get_random_cut(pack) do
-      {:ok, cut, amount} -> {:ok, player |> Map.put(:pack, decrease_cut(pack, cut, amount))}
-      :error             -> {:error, :no_cuts_owned}
-    end
-  end
-
-  def mug_player(%Player{weapon: nil} = player, :fight), do: {:ok, player, :defeat}
-
-  def mug_player(player, :fight) do
+  def fight_mugger(player) do
     case Weapon.get_damage(player.weapon) <= Enum.random(1..10) do
       true ->
         harvest = harvest_mugger(player.weapon)
@@ -189,7 +173,21 @@ defmodule FutureButcherEngine.Player do
     end
   end
 
-  def mug_player(_player, _response), do: {:error, :invalid_mugging_response}
+  def pay_mugger(%Player{pack: pack} = player, :cuts) do
+    case get_random_cut(pack) do
+      {:ok, cut, amount} -> {:ok, player |> Map.put(:pack, decrease_cut(pack, cut, amount))}
+                  :error -> {:error, :no_cuts_owned}
+    end
+  end
+
+  def pay_mugger(%Player{funds: funds}, :funds) when funds == 0, do: {:error, :insufficient_funds}
+
+  def pay_mugger(%Player{funds: funds} = player, :funds) do
+    funds_penalty = Enum.random(12..21) |> Kernel./(100) |> (fn n -> round(funds * n) end).()
+    {:ok, player |> decrease_attribute(:funds, funds_penalty)}
+  end
+
+  def pay_mugger(_player, _response), do: {:error, :invalid_mugging_response}
 
 
   # Funds ----------------------------------------------------------------------
