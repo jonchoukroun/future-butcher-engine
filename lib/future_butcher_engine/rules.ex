@@ -40,20 +40,24 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
-  def check(%Rules{state: :in_game, turns_left: 0} = rules, :change_station) do
+  def check(%Rules{state: :in_game, turns_left: 0} = rules, :mugging) do
     {:game_over, %Rules{rules | state: :game_over}}
   end
 
-  def check(%Rules{state: :in_game} = rules, :change_station) do
-    {:ok, %Rules{rules | state: :in_transit}}
+  def check(%Rules{state: :in_game, turns_left: 0} = rules, :end_transit) do
+    {:game_over, %Rules{rules | state: :game_over}}
   end
 
-  def check(%Rules{state: :in_transit} = rules, :end_transit) do
+  def check(%Rules{state: :in_game} = rules, :end_transit) do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
-  def check(%Rules{state: :in_transit} = rules, :mug_player) do
-    {:ok, %Rules{rules | state: :in_transit}}
+  def check(%Rules{state: :mugging} = rules, :fight_mugger) do
+    {:ok, %Rules{rules | state: :in_game}}
+  end
+
+  def check(%Rules{state: :in_game} = rules, :mugging) do
+    {:ok, %Rules{rules | state: :mugging}}
   end
 
   def check(%Rules{state: :in_game} = rules, :buy_pack) do
