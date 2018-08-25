@@ -18,24 +18,10 @@ defmodule FutureButcherEngine.RulesTest do
     end
   end
 
-  test "Changing station from subway ends game" do
-    rules = %Rules{Rules.new(1) | turns_left: 0, state: :in_game}
-    {status, rules} = Rules.check(rules, :change_station)
-    assert status == :game_over
-    assert rules.state == :game_over
-  end
-
   test "No events change rules over state" do
     rules = Rules.new(4)
     rules = %Rules{rules | state: :game_over}
     assert Rules.check(rules, :any_action) == {:error, :game_over}
-  end
-
-  test "Change station sets rules to in_transit" do
-    rules = Rules.new(5)
-    rules = %Rules{rules | state: :in_game}
-    {:ok, rules} = Rules.check(rules, :change_station)
-    assert rules.state == :in_transit
   end
 
   test "Failure to pass valid state or action returns generic error" do
