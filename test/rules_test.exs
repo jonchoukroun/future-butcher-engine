@@ -10,7 +10,9 @@ defmodule FutureButcherEngine.RulesTest do
   end
 
   describe "Initialized game with valid number of turns" do
-    setup do: {:ok, rules: %Rules{turns_left: 10, state: :initialized}}
+    setup _context do
+      {:ok, rules: %Rules{turns_left: 10, state: :initialized}}
+    end
 
     test "Start game updates state", context do
       {:ok, rules} = Rules.check(context.rules, :start_game)
@@ -29,6 +31,20 @@ defmodule FutureButcherEngine.RulesTest do
     assert Rules.check(rules, :bullshit_action) == {
       :error, :violates_current_rules}
     assert Rules.check(5, :visit_subway) == {:error, :violates_current_rules}
+  end
+
+  describe "Changing station" do
+    setup _context do
+      {:ok, rules: %Rules{turns_left: 10, state: :in_game}}
+    end
+
+    test "with state mugging restricts actions", context do
+      testing_rules = %Rules{context.rules | state: :mugging}
+
+      [:change_station, :buy_cut, :sell_cut, :buy_weapon, :pay_debt]
+      |> Enum.each(fn action ->
+        assert Rules.check(testing_rules, action) === {:error, :violates_current_rules} end)
+    end
   end
 
 end

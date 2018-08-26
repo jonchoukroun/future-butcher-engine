@@ -52,12 +52,16 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
+  def check(%Rules{state: :in_game} = rules, :mugging) do
+    {:ok, %Rules{rules | state: :mugging}}
+  end
+
   def check(%Rules{state: :mugging} = rules, :fight_mugger) do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
-  def check(%Rules{state: :in_game} = rules, :mugging) do
-    {:ok, %Rules{rules | state: :mugging}}
+  def check(%Rules{state: :mugging} = rules, :pay_mugger) do
+    {:ok, %Rules{rules | state: :in_game}}
   end
 
   def check(%Rules{state: :in_game} = rules, :buy_pack) do
