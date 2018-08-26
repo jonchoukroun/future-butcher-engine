@@ -1,6 +1,6 @@
 defmodule GameTest do
   use ExUnit.Case
-  alias FutureButcherEngine.{Game, GameSupervisor, Player}
+  alias FutureButcherEngine.{Game, GameSupervisor, Rules, Player}
 
 
   # Game init ------------------------------------------------------------------
@@ -34,9 +34,7 @@ defmodule GameTest do
       {:ok, game} = GameSupervisor.start_game("Frank")
       {:ok, state} = Game.start_game(game)
 
-      on_exit fn ->
-        GameSupervisor.stop_game "Frank"
-      end
+      on_exit fn -> GameSupervisor.stop_game "Frank" end
 
       %{state: state}
     end
@@ -68,15 +66,13 @@ defmodule GameTest do
 
   describe ".change_station when in game" do
     setup _context do
-      {:ok, game} = GameSupervisor.start_game("Frank")
-      {:ok, starting_state} = Game.start_game(game)
+      {:ok, game}       = GameSupervisor.start_game("Frank")
+      {:ok, base_state} = Game.start_game(game)
       {:ok, test_state} = Game.change_station(game, :compton)
 
-      on_exit fn ->
-        GameSupervisor.stop_game "Frank"
-      end
+      on_exit fn -> GameSupervisor.stop_game "Frank" end
 
-      %{starting_state: starting_state, test_state: test_state}
+      %{base_state: base_state, test_state: test_state}
     end
 
     test "changes game state", context do
@@ -89,127 +85,80 @@ defmodule GameTest do
     end
 
     test "decrements turn by 1", context do
-      assert context.starting_state.rules.turns_left - context.test_state.rules.turns_left == 1
+      assert context.base_state.rules.turns_left - context.test_state.rules.turns_left == 1
     end
   end
 
-  # describe ".mug_player :fight - with 1 turn left" do
-  #   setup _context do
-  #     {:ok, game} = GameSupervisor.start_game("Frank")
-  #     Game.start_game(game)
-  #
-  #     {:ok, state} = Game.change_station(game, :compton)
-  #     end_rules = state |> Map.get(:rules) |> Map.put(:turns_left, 1)
-  #     end_state = Map.put(state, :rules, end_rules)
-  #     :sys.replace_state game, fn(_state) -> end_state end
-  #
-  #     on_exit fn ->
-  #       GameSupervisor.stop_game "Frank"
-  #     end
-  #
-  #     %{game: game}
-  #   end
-  #
-  #   test "returns error", context do
-  #     assert Game.mug_player(context.game, :fight) == :not_enough_turns
-  #   end
-  # end
+  describe ".fight_mugger" do
+    setup _context do
+      {:ok, game}  = GameSupervisor.start_game("Frank")
+      {:ok, state} = Game.start_game(game)
 
-  # describe ".mug_player :fight - with no weapon" do
-  #   setup _context do
-  #     {:ok, game} = GameSupervisor.start_game("Frank")
-  #     Game.start_game(game)
-  #
-  #     {:ok, starting_state} = Game.change_station(game, :compton)
-  #     {:ok, test_state}     = Game.mug_player(game, :fight)
-  #
-  #     on_exit fn ->
-  #       GameSupervisor.stop_game "Frank"
-  #     end
-  #
-  #     %{starting_state: starting_state, test_state: test_state}
-  #   end
-  #
-  #   test "decrements turns", context do
-  #     assert context.starting_state.rules.turns_left > context.test_state.rules.turns_left
-  #   end
-  #
-  #   test "state remains unchanged", context do
-  #     assert context.test_state.rules.state == :in_transit
-  #   end
-  # end
+      test_rules = %Rules{turns_left: 10, state: :mugging}
+      :sys.replace_state game, fn _state -> %{state | rules: test_rules} end
 
-  # describe ".mug_player :fight - with a weapon" do
-  #   setup _context do
-  #     {:ok, game} = GameSupervisor.start_game("Frank")
-  #     Game.start_game(game)
-  #
-  #     {:ok, state} = Game.change_station(game, :compton)
-  #
-  #     {:ok, armed_player} = Player.buy_weapon(state.player, :machete, 0)
-  #     starting_state      = Map.put(state, :player, armed_player)
-  #     :sys.replace_state game, fn(_state) -> starting_state end
-  #
-  #
-  #     {:ok, test_state}     = Game.mug_player(game, :fight)
-  #
-  #     on_exit fn ->
-  #       GameSupervisor.stop_game "Frank"
-  #     end
-  #
-  #     %{starting_state: starting_state, test_state: test_state}
-  #   end
-  #
-  #   test "state remains unchanged", context do
-  #     assert context.test_state.rules.state == :in_transit
-  #   end
-  # end
+      on_exit fn -> GameSupervisor.stop_game "Frank" end
 
-  # describe ".mug_player :funds - with 0 funds" do
-  #   setup _context do
-  #     {:ok, game} = GameSupervisor.start_game("Frank")
-  #     Game.start_game(game)
-  #     Game.change_station(game, :compton)
-  #
-  #     on_exit fn ->
-  #       GameSupervisor.stop_game("Frank")
-  #     end
-  #
-  #     %{game: game}
-  #   end
-  #
-  #   test "returns error", context do
-  #     assert Game.mug_player(context.game, :funds) == :insufficient_funds
-  #   end
-  # end
+      %{game: game}
+    end
 
-  # describe ".mug_player :funds - with funds" do
-  #   setup _context do
-  #     {:ok, game} = GameSupervisor.start_game("Frank")
-  #     Game.start_game(game)
-  #
-  #     funds = 5000
-  #     Game.buy_loan(game, funds, 0.1)
-  #
-  #     {:ok, starting_state} = Game.change_station(game, :compton)
-  #     {:ok, test_state}     = Game.mug_player(game, :funds)
-  #
-  #     on_exit fn ->
-  #       GameSupervisor.stop_game("Frank")
-  #     end
-  #
-  #     %{starting_state: starting_state, test_state: test_state}
-  #   end
-  #
-  #   test "decreases player funds", context do
-  #     assert context.starting_state.player.funds > context.test_state.player.funds
-  #   end
-  #
-  #   test "does not decrease turns or change state", context do
-  #     assert context.starting_state.rules.turns_left == context.test_state.rules.turns_left
-  #     assert context.starting_state.rules.state == context.test_state.rules.state
-  #   end
-  # end
+    test "with no weapon decrements turns", context do
+      base_state        = :sys.get_state context.game
+      {:ok, test_state} = Game.fight_mugger(context.game)
+
+      assert base_state.rules.turns_left > test_state.rules.turns_left
+    end
+
+    test "restores in_game state", context do
+      base_state  = :sys.get_state context.game
+      test_player = %Player{base_state.player | weapon: :machete}
+      :sys.replace_state context.game, fn _state -> %{base_state | player: test_player} end
+
+      {:ok, test_state} = Game.fight_mugger(context.game)
+
+      assert test_state.rules.state === :in_game
+    end
+
+    test "with 0 turns left", context do
+      base_state = :sys.get_state context.game
+      test_rules = %Rules{base_state.rules | turns_left: 0}
+      :sys.replace_state context.game, fn _state -> %{base_state | rules: test_rules} end
+
+      assert Game.fight_mugger(context.game) === :violates_current_rules
+    end
+  end
+
+  describe ".pay_mugger :funds" do
+    setup _context do
+      {:ok, game}  = GameSupervisor.start_game("Frank")
+      {:ok, state} = Game.start_game(game)
+
+      test_rules = %Rules{state.rules | state: :mugging}
+      :sys.replace_state game, fn _state -> %{state | rules: test_rules} end
+
+      on_exit fn -> GameSupervisor.stop_game("Frank") end
+
+      %{game: game}
+    end
+
+    test "with 0 funds returns error", context do
+      assert Game.pay_mugger(context.game, :funds) === :insufficient_funds
+    end
+
+    test "with funds decreases funds and restores in game state", context do
+      base_state  = :sys.get_state context.game
+      test_player = %Player{base_state.player | funds: 1000}
+      :sys.replace_state context.game, fn _state -> %{base_state | player: test_player} end
+
+      starting_state = :sys.get_state context.game
+
+      {:ok, test_state} = Game.pay_mugger(context.game, :funds)
+
+      assert starting_state.player.funds > test_state.player.funds
+      assert test_state.rules.state === :in_game
+    end
+  end
+
 
   # Weapons --------------------------------------------------------------------
 

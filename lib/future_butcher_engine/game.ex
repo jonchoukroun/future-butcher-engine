@@ -7,7 +7,7 @@ defmodule FutureButcherEngine.Game do
 
   @stations [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
 
-  @mugging_choices [:funds, :cuts]
+  @mugging_responses [:funds, :cuts]
 
   @turns 25
 
@@ -69,16 +69,20 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, {:change_station, destination})
   end
 
-  def mug_player(game, choice) do
-    GenServer.call(game, {:mug_player, choice})
+  def fight_mugger(game) do
+    GenServer.call(game, {:fight_mugger})
   end
+
+  def pay_mugger(game, response) do
+    GenServer.call(game, {:pay_mugger, response})
+  end
+
+
+  # Items ----------------------------------------------------------------------
 
   def buy_pack(game, pack_space, cost) do
     GenServer.call(game, {:buy_pack, pack_space, cost})
   end
-
-
-  # Weapons --------------------------------------------------------------------
 
   def get_weapons_menu(game) do
     GenServer.call(game, {:get_weapons_menu})
@@ -213,10 +217,10 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def handle_call({:mug_player, :fight}, _from, state_data) do
-    with {:ok, rules}           <- Rules.check(state_data.rules, :mug_player),
-         {:ok, player, outcome} <- Player.mug_player(state_data.player, :fight),
-         {:ok, turns_penalty}   <- generate_turns_penalty(state_data.rules.turns_left, outcome)
+  def handle_call({:fight_mugger}, _from, state_data) do
+    with           {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
+         {:ok, player, outcome} <- Player.fight_mugger(state_data.player),
+           {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left, outcome)
     do
       state_data
       |> update_player(player)
@@ -227,18 +231,23 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def handle_call({:mug_player, choice}, _from, state_data) when choice in @mugging_choices do
-    with {:ok, rules} <- Rules.check(state_data.rules, :mug_player),
-        {:ok, player} <- Player.mug_player(state_data.player, choice)
+  def handle_call({:pay_mugger, response}, _from, state_data) when response in @mugging_responses do
+    with {:ok, rules}  <- Rules.check(state_data.rules, :pay_mugger),
+         {:ok, player} <- Player.pay_mugger(state_data.player, response)
     do
       state_data
-      |> update_rules(rules)
       |> update_player(player)
+      |> update_rules(rules)
       |> reply_success(:ok)
     else
       {:error, msg} -> reply_failure(state_data, msg)
     end
   end
+
+  def handle_call({:pay_mugger, _response}, _from, _state_data), do: {:error, :invalid_response}
+
+
+  # Items ----------------------------------------------------------------------
 
   def handle_call({:buy_pack, pack_space, cost}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
@@ -252,9 +261,6 @@ defmodule FutureButcherEngine.Game do
       {:error, msg} -> reply_failure(state_data, msg)
     end
   end
-
-
-  # Weapons --------------------------------------------------------------------
 
   def handle_call({:buy_weapon, weapon}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :buy_weapon),
@@ -332,16 +338,24 @@ defmodule FutureButcherEngine.Game do
   # Computations ===============================================================
 
   def initiate_random_occurence(state_data, destination) do
-    {:ok, Enum.random([:mugging, :end_transit])}
+    pack_space      = state_data.player.pack_space
+    turns_left      = state_data.rules.turns_left
+    base_crime_rate = Station.get_base_crime_rate(destination)
+    p = (pack_space / 20) / (turns_left / base_crime_rate)
+
+    case :rand.uniform > p do
+      true  -> {:ok, :end_transit}
+      false -> {:ok, :mugging}
+    end
+
   end
 
-  defp generate_turns_penalty(_turns, :victory), do: {:ok, 0}
+  defp generate_turns_penalty(_turns_left, :victory), do: {:ok, 0}
 
-  defp generate_turns_penalty(turns_left, :defeat)
-  when turns_left <= 1, do: {:error, :not_enough_turns}
+  defp generate_turns_penalty(turns_left, :defeat) when turns_left === 1, do: {:ok, turns_left}
 
   defp generate_turns_penalty(turns_left, :defeat) do
-    {:ok, Enum.random(2..Enum.min([(turns_left - 1), 4]))}
+    {:ok, Enum.random(1..Enum.min([turns_left, 4]))}
   end
 
   defp generate_turns_penalty(_turns_left, _outcome), do: {:error, :invalid_outcome}

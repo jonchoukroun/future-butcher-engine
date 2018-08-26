@@ -56,7 +56,8 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :mugging}}
   end
 
-  def check(%Rules{state: :mugging} = rules, :fight_mugger) do
+  def check(%Rules{state: :mugging, turns_left: turns_left} = rules, :fight_mugger)
+  when turns_left > 0 do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
