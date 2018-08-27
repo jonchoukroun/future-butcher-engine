@@ -19,7 +19,7 @@ defmodule FutureButcherEngine.Weapon do
     Enum.count(get_cuts(weapon))
     |> Kernel.+(1)
     |> Kernel.*(get_damage(weapon))
-    |> Kernel./(turns_left)
+    |> Kernel./(turns_left / 3)
     |> :math.pow(2)
     |> Kernel./(get_weight(weapon))
     |> Kernel.*(700)
