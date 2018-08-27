@@ -15,7 +15,7 @@ defmodule FutureButcherEngine.Cut do
 
   def cut_names, do: @cuts_list
 
-  def maximum_quantity(cut), do: @cut_values[cut][:max]
+  def maximum_quantity(cut) when cut in @cuts_list, do: @cut_values[cut][:max]
   def maximum_quantity(_cut), do: {:error, :invalid_cut_name}
 
   def new(type, quantity) when type in @cuts_list do
