@@ -165,7 +165,7 @@ defmodule FutureButcherEngine.Player do
   def fight_mugger(player) do
     case Weapon.get_damage(player.weapon) <= Enum.random(1..10) do
       true ->
-        harvest = harvest_mugger(player.weapon)
+        harvest = harvest_mugger(player)
         |> Enum.reduce(player.pack, fn cut, pack -> increase_cut(pack, cut, 1) end)
         {:ok, player |> Map.put(:pack, harvest), :victory}
       false ->
@@ -217,14 +217,17 @@ defmodule FutureButcherEngine.Player do
     end
   end
 
-  defp sufficient_space?(player, amount) do
-    space_taken = player.pack
-    |> Map.values
-    |> Enum.reduce(0, fn(x, acc) -> x + acc end)
-
+  defp get_weight_carried(player) do
     weapon_weight = if player.weapon, do: Weapon.get_weight(player.weapon), else: 0
 
-    if space_taken + weapon_weight + amount <= player.pack_space do
+    player.pack
+    |> Map.values()
+    |> Enum.reduce(0, fn cut, acc -> cut + acc end)
+    |> Kernel.+(weapon_weight)
+  end
+
+  defp sufficient_space?(player, amount) do
+    if get_weight_carried(player) + amount <= player.pack_space do
       {:ok}
     else
       {:error, :insufficient_pack_space}
@@ -242,9 +245,13 @@ defmodule FutureButcherEngine.Player do
 
   # Property updates -----------------------------------------------------------
 
-  defp harvest_mugger(weapon) do
-    Weapon.get_cuts(weapon)
-    |> Enum.reject(fn(_cut) -> Enum.random(0..10) >= 4 end)
+  defp harvest_mugger(player) do
+    Weapon.get_cuts(player.weapon)
+    |> Enum.reject(fn _cut -> Enum.random(0..10) >= 4 end)
+    |> Enum.map_reduce(get_weight_carried(player), fn cut, acc ->
+      {(if player.pack_space > acc, do: cut), (acc + 1)} end)
+    |> elem(0)
+    |> Enum.reject(fn cut -> is_nil(cut) end)
   end
 
   defp increase_cut(pack, cut, amount) do
