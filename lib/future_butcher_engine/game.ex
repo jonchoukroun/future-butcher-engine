@@ -202,12 +202,15 @@ defmodule FutureButcherEngine.Game do
   # Travel/transit -------------------------------------------------------------
 
   def handle_call({:change_station, destination}, _from, state_data) do
-    with         {:ok} <- valid_destination?(state_data.station.station_name, destination),
-        {:ok, outcome} <- initiate_random_occurence(state_data, destination),
-          {:ok, rules} <- Rules.check(state_data.rules, outcome)
+    with       {:ok} <- valid_destination?(state_data.station.station_name, destination),
+      {:ok, outcome} <- initiate_random_occurence(
+                          state_data.player.pack_space, state_data.rules.turns_left, destination),
+        {:ok, rules} <- Rules.check(state_data.rules, outcome),
+       {:ok, player} <- Player.accrue_debt(state_data.player)
     do
       state_data
       |> update_rules(decrement_turn(rules, 1))
+      |> update_player(player)
       |> travel_to(destination)
       |> reply_success(:ok)
     else
@@ -316,15 +319,12 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  defp valid_destination?(destination, station_name)
-  when destination === station_name do
-    {:error, :already_at_station}
-  end
+  defp valid_destination?(current_station, destination)
+  when destination === current_station, do: {:error, :already_at_station}
 
-  defp valid_destination?(destination, _) when destination in @stations,
-    do: {:ok}
+  defp valid_destination?(_current_station, destination) when destination in @stations, do: {:ok}
 
-  defp valid_destination?(_destination, _), do: {:error, :invalid_station}
+  defp valid_destination?(_station_name, _destination), do: {:error, :invalid_station}
 
   defp cuts_owned?(pack, cut, amount) do
     if Map.get(pack, cut) >= amount do
@@ -337,9 +337,10 @@ defmodule FutureButcherEngine.Game do
 
   # Computations ===============================================================
 
-  def initiate_random_occurence(state_data, destination) do
-    pack_space      = state_data.player.pack_space
-    turns_left      = state_data.rules.turns_left
+  defp initiate_random_occurence(_pack_space, turns_left, _destination)
+  when turns_left === 0, do: {:ok, :end_transit}
+
+  defp initiate_random_occurence(pack_space, turns_left, destination) do
     base_crime_rate = Station.get_base_crime_rate(destination)
     p = (pack_space / 20) / (turns_left / base_crime_rate)
 
