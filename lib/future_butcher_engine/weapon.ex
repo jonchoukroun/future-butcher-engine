@@ -1,5 +1,4 @@
 defmodule FutureButcherEngine.Weapon do
-  alias __MODULE__
 
   @enforce_keys [:type, :damage, :weight, :cuts]
   defstruct [:type, :damage, :weight, :cuts]
