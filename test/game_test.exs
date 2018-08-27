@@ -67,12 +67,13 @@ defmodule GameTest do
   describe ".change_station when in game" do
     setup _context do
       {:ok, game}       = GameSupervisor.start_game("Frank")
-      {:ok, base_state} = Game.start_game(game)
+      Game.start_game(game)
+      {:ok, base_state} = Game.buy_loan(game, 5000, 0.2)
       {:ok, test_state} = Game.change_station(game, :compton)
 
       on_exit fn -> GameSupervisor.stop_game "Frank" end
 
-      %{base_state: base_state, test_state: test_state}
+      %{base_state: base_state, test_state: test_state, game: game}
     end
 
     test "changes game state", context do
@@ -86,6 +87,21 @@ defmodule GameTest do
 
     test "decrements turn by 1", context do
       assert context.base_state.rules.turns_left - context.test_state.rules.turns_left == 1
+    end
+
+    test "with exisitng player debt rate accrues debt", context do
+      assert context.test_state.player.rate === 0.2
+      assert context.test_state.player.debt === 6000
+    end
+
+    test "with 0 turns left ends game", context do
+      test_rules = %Rules{context.test_state.rules | turns_left: 0}
+      :sys.replace_state context.game, fn _state -> %{context.test_state | rules: test_rules} end
+
+      {end_response, end_state} = Game.change_station(context.game, :hollywood)
+
+      assert end_response          === :game_over
+      assert end_state.rules.state === :game_over
     end
   end
 
