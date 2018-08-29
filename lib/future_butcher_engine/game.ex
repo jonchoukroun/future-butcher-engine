@@ -84,10 +84,6 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, {:buy_pack, pack_space, cost})
   end
 
-  def get_weapons_menu(game) do
-    GenServer.call(game, {:get_weapons_menu})
-  end
-
   def buy_weapon(game, weapon) do
     GenServer.call(game, {:buy_weapon, weapon})
   end
