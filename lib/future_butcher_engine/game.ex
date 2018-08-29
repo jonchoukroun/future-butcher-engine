@@ -338,7 +338,11 @@ defmodule FutureButcherEngine.Game do
 
   defp initiate_random_occurence(pack_space, turns_left, destination) do
     base_crime_rate = Station.get_base_crime_rate(destination)
-    p = (pack_space / 20) / (turns_left / base_crime_rate)
+    turns           = 25 - turns_left
+    p = (base_crime_rate / 100) * :math.pow(turns, 2)
+        |> Kernel.+(0.1 * turns)
+        |> Kernel.+(pack_space / 4)
+        |> Kernel./(100)
 
     case :rand.uniform > p do
       true  -> {:ok, :end_transit}
