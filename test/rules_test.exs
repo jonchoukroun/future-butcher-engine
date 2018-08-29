@@ -1,6 +1,6 @@
 defmodule FutureButcherEngine.RulesTest do
   use ExUnit.Case
-  alias FutureButcherEngine.{Rules}
+  alias FutureButcherEngine.Rules
 
   test "Passing non integer or less than 1 to new rules returns error" do
 
@@ -10,20 +10,14 @@ defmodule FutureButcherEngine.RulesTest do
   end
 
   describe "Initialized game with valid number of turns" do
-    setup do: {:ok, rules: %Rules{turns_left: 10, state: :initialized}}
+    setup _context do
+      {:ok, rules: %Rules{turns_left: 10, state: :initialized}}
+    end
 
-    test "Start game decrements turns and updates state", context do
+    test "Start game updates state", context do
       {:ok, rules} = Rules.check(context.rules, :start_game)
       assert rules.state == :in_game
-      assert rules.turns_left == 9
     end
-  end
-
-  test "Changing station from subway ends game" do
-    rules = %Rules{Rules.new(1) | turns_left: 0, state: :in_game}
-    {status, rules} = Rules.check(rules, :change_station)
-    assert status == :game_over
-    assert rules.state == :game_over
   end
 
   test "No events change rules over state" do
@@ -32,19 +26,25 @@ defmodule FutureButcherEngine.RulesTest do
     assert Rules.check(rules, :any_action) == {:error, :game_over}
   end
 
-  test "Change station returns in rules state and decrements turns left" do
-    rules = Rules.new(5)
-    rules = %Rules{rules | state: :in_game}
-    {:ok, rules} = Rules.check(rules, :change_station)
-    assert rules.state == :in_game
-    assert rules.turns_left == 4
-  end
-
   test "Failure to pass valid state or action returns generic error" do
     rules = Rules.new(1)
     assert Rules.check(rules, :bullshit_action) == {
       :error, :violates_current_rules}
     assert Rules.check(5, :visit_subway) == {:error, :violates_current_rules}
+  end
+
+  describe "Changing station" do
+    setup _context do
+      {:ok, rules: %Rules{turns_left: 10, state: :in_game}}
+    end
+
+    test "with state mugging restricts actions", context do
+      testing_rules = %Rules{context.rules | state: :mugging}
+
+      [:change_station, :buy_cut, :sell_cut, :buy_weapon, :pay_debt]
+      |> Enum.each(fn action ->
+        assert Rules.check(testing_rules, action) === {:error, :violates_current_rules} end)
+    end
   end
 
 end

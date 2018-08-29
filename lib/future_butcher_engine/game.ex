@@ -5,7 +5,9 @@ defmodule FutureButcherEngine.Game do
   @enforce_keys [:player, :rules]
   defstruct [:player, :rules]
 
-  @stations [:downtown, :venice_beach, :koreatown, :culver_city, :silverlake]
+  @stations [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
+
+  @mugging_responses [:funds, :cuts]
 
   @turns 25
 
@@ -18,7 +20,8 @@ defmodule FutureButcherEngine.Game do
 
   def via_tuple(name), do: {:via, Registry, {Registry.Game, name}}
 
-  # Client functions
+
+  # Client functions ===========================================================
 
   def init(name) do
     send(self(), {:set_state, name})
@@ -37,9 +40,19 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, :start_game)
   end
 
+
+  # Debt/loans -----------------------------------------------------------------
+
   def buy_loan(game, debt, rate) do
     GenServer.call(game, {:buy_loan, debt, rate})
   end
+
+  def pay_debt(game, amount) when amount > 0 do
+    GenServer.call(game, {:pay_debt, amount})
+  end
+
+
+  # Buy/sell cuts --------------------------------------------------------------
 
   def buy_cut(game, cut, amount) when amount > 0 do
     GenServer.call(game, {:buy_cut, cut, amount})
@@ -49,16 +62,42 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, {:sell_cut, cut, amount})
   end
 
-  def pay_debt(game, amount) when amount > 0 do
-    GenServer.call(game, {:pay_debt, amount})
-  end
+
+  # Travel/transit -------------------------------------------------------------
 
   def change_station(game, destination) do
     GenServer.call(game, {:change_station, destination})
   end
 
+  def fight_mugger(game) do
+    GenServer.call(game, {:fight_mugger})
+  end
 
-  # GenServer callbacks
+  def pay_mugger(game, response) do
+    GenServer.call(game, {:pay_mugger, response})
+  end
+
+
+  # Items ----------------------------------------------------------------------
+
+  def buy_pack(game, pack_space, cost) do
+    GenServer.call(game, {:buy_pack, pack_space, cost})
+  end
+
+  def buy_weapon(game, weapon) do
+    GenServer.call(game, {:buy_weapon, weapon})
+  end
+
+  def replace_weapon(game, weapon) do
+    GenServer.call(game, {:replace_weapon, weapon})
+  end
+
+  def drop_weapon(game) do
+    GenServer.call(game, {:drop_weapon})
+  end
+
+  # GenServer callbacks ========================================================
+
   def handle_info(:timeout, state_data) do
     {:stop, {:shutdown, :timeout}, state_data}
   end
@@ -83,13 +122,16 @@ defmodule FutureButcherEngine.Game do
     with {:ok, rules} <- Rules.check(state_data.rules, :start_game)
     do
       state_data
-      |> update_rules(rules)
+      |> update_rules(decrement_turn(rules, 1))
       |> travel_to(:downtown)
       |> reply_success(:ok)
     else
       {:error, msg} -> {:reply, {:error, msg}, state_data}
     end
   end
+
+
+  # Debt/loans -----------------------------------------------------------------
 
   def handle_call({:buy_loan, debt, rate}, _from, state_data) do
     with {:ok, rules}  <- Rules.check(state_data.rules, :buy_loan),
@@ -98,38 +140,6 @@ defmodule FutureButcherEngine.Game do
       state_data
       |> update_rules(rules)
       |> update_player(player)
-      |> reply_success(:ok)
-    else
-      {:error, msg} -> reply_failure(state_data, msg)
-    end
-  end
-
-  def handle_call({:buy_cut, cut, amount}, _from, state_data) do
-    with  {:ok, rules} <- Rules.check(state_data.rules, :buy_cut),
-                 {:ok} <- valid_amount?(state_data.station.market, cut, amount),
-           {:ok, cost} <- get_price(state_data.station.market, cut, amount),
-         {:ok, player} <- Player.buy_cut(state_data.player, cut, amount, cost)
-    do
-      state_data
-      |> update_market(cut, amount, :buy)
-      |> update_player(player)
-      |> update_rules(rules)
-      |> reply_success(:ok)
-    else
-      {:error, msg} -> reply_failure(state_data, msg)
-    end
-  end
-
-  def handle_call({:sell_cut, cut, amount}, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :sell_cut),
-                {:ok} <- cuts_owned?(state_data.player.pack, cut, amount),
-        {:ok, profit} <- get_price(state_data.station.market, cut, amount),
-        {:ok, player} <- Player.sell_cut(state_data.player, cut, amount, profit)
-    do
-      state_data
-      |> update_market(cut, amount, :sell)
-      |> update_player(player)
-      |> update_rules(rules)
       |> reply_success(:ok)
     else
       {:error, msg} -> reply_failure(state_data, msg)
@@ -149,14 +159,53 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def handle_call({:change_station, destination}, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :change_station),
-                {:ok} <- valid_destination?(
-                          state_data.station.station_name, destination),
-        {:ok, player} <- Player.accrue_debt(state_data.player)
+
+  # Buy/sell cuts --------------------------------------------------------------
+
+  def handle_call({:buy_cut, cut, amount}, _from, state_data) do
+    with  {:ok, rules} <- Rules.check(state_data.rules, :buy_cut),
+                 {:ok} <- valid_amount?(state_data.station.market, cut, amount),
+           {:ok, cost} <- get_cut_price(state_data.station.market, cut, amount),
+         {:ok, player} <- Player.buy_cut(state_data.player, cut, amount, cost)
     do
       state_data
+      |> update_market(cut, amount, :buy)
+      |> update_player(player)
       |> update_rules(rules)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+
+  def handle_call({:sell_cut, cut, amount}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :sell_cut),
+                {:ok} <- cuts_owned?(state_data.player.pack, cut, amount),
+        {:ok, profit} <- get_cut_price(state_data.station.market, cut, amount),
+        {:ok, player} <- Player.sell_cut(state_data.player, cut, amount, profit)
+    do
+      state_data
+      |> update_market(cut, amount, :sell)
+      |> update_player(player)
+      |> update_rules(rules)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+
+
+  # Travel/transit -------------------------------------------------------------
+
+  def handle_call({:change_station, destination}, _from, state_data) do
+    with       {:ok} <- valid_destination?(state_data.station.station_name, destination),
+      {:ok, outcome} <- initiate_random_occurence(
+                          state_data.player.pack_space, state_data.rules.turns_left, destination),
+        {:ok, rules} <- Rules.check(state_data.rules, outcome),
+       {:ok, player} <- Player.accrue_debt(state_data.player)
+    do
+      state_data
+      |> update_rules(decrement_turn(rules, 1))
       |> update_player(player)
       |> travel_to(destination)
       |> reply_success(:ok)
@@ -167,8 +216,96 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
+  def handle_call({:fight_mugger}, _from, state_data) do
+    with           {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
+         {:ok, player, outcome} <- Player.fight_mugger(state_data.player),
+           {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left, outcome)
+    do
+      state_data
+      |> update_player(player)
+      |> update_rules(decrement_turn(rules, turns_penalty))
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
 
-  # Validations
+  def handle_call({:pay_mugger, response}, _from, state_data) when response in @mugging_responses do
+    with {:ok, rules}  <- Rules.check(state_data.rules, :pay_mugger),
+         {:ok, player} <- Player.pay_mugger(state_data.player, response)
+    do
+      state_data
+      |> update_player(player)
+      |> update_rules(rules)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+
+  def handle_call({:pay_mugger, _response}, _from, _state_data), do: {:error, :invalid_response}
+
+
+  # Items ----------------------------------------------------------------------
+
+  def handle_call({:buy_pack, pack_space, cost}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
+        {:ok, player} <- Player.buy_pack(state_data.player, pack_space, cost)
+    do
+      state_data
+      |> update_rules(rules)
+      |> update_player(player)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+
+  def handle_call({:buy_weapon, weapon}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :buy_weapon),
+          {:ok, cost} <- get_weapon_price(state_data.station.store, weapon, :cost),
+        {:ok, player} <- Player.buy_weapon(state_data.player, weapon, cost)
+    do
+      state_data
+      |> update_rules(rules)
+      |> update_player(player)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+
+  def handle_call({:replace_weapon, weapon}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :replace_weapon),
+          {:ok, cost} <- get_weapon_price(state_data.station.store, weapon, :cost),
+         {:ok, value} <-
+           get_weapon_price(state_data.station.store, state_data.player.weapon, :value),
+        {:ok, player} <- Player.replace_weapon(state_data.player, weapon, cost, value)
+    do
+      state_data
+      |> update_rules(rules)
+      |> update_player(player)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+
+  def handle_call({:drop_weapon}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :drop_weapon),
+        {:ok, player} <- Player.drop_weapon(state_data.player)
+    do
+      state_data
+      |> update_rules(rules)
+      |> update_player(player)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+
+  end
+
+  # Validations ================================================================
 
   defp valid_amount?(market, cut, amount) do
     if Map.get(market, cut).quantity >= amount do
@@ -178,15 +315,12 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  defp valid_destination?(destination, station_name)
-  when destination === station_name do
-    {:error, :already_at_station}
-  end
+  defp valid_destination?(current_station, destination)
+  when destination === current_station, do: {:error, :already_at_station}
 
-  defp valid_destination?(destination, _) when destination in @stations,
-    do: {:ok}
+  defp valid_destination?(_current_station, destination) when destination in @stations, do: {:ok}
 
-  defp valid_destination?(_destination, _), do: {:error, :invalid_station}
+  defp valid_destination?(_station_name, _destination), do: {:error, :invalid_station}
 
   defp cuts_owned?(pack, cut, amount) do
     if Map.get(pack, cut) >= amount do
@@ -197,9 +331,50 @@ defmodule FutureButcherEngine.Game do
   end
 
 
-  # Computations
+  # Computations ===============================================================
 
-  defp get_price(market, cut, amount) do
+  defp initiate_random_occurence(_pack_space, turns_left, _destination)
+  when turns_left === 0, do: {:ok, :end_transit}
+
+  defp initiate_random_occurence(pack_space, turns_left, destination) do
+    base_crime_rate = Station.get_base_crime_rate(destination)
+    turns           = 25 - turns_left
+    p = (base_crime_rate / 100) * :math.pow(turns, 2)
+        |> Kernel.+(0.1 * turns)
+        |> Kernel.+(pack_space / 4)
+        |> Kernel./(100)
+
+    case :rand.uniform > p do
+      true  -> {:ok, :end_transit}
+      false -> {:ok, :mugging}
+    end
+
+  end
+
+  defp generate_turns_penalty(_turns_left, :victory), do: {:ok, 0}
+
+  defp generate_turns_penalty(turns_left, :defeat) when turns_left === 1, do: {:ok, turns_left}
+
+  defp generate_turns_penalty(turns_left, :defeat) do
+    {:ok, Enum.random(1..Enum.min([turns_left, 4]))}
+  end
+
+  defp generate_turns_penalty(_turns_left, _outcome), do: {:error, :invalid_outcome}
+
+  defp get_weapon_price(store, weapon, :cost) do
+    if Map.get(store, weapon) do
+      {:ok, Map.get(store, weapon).price}
+    else
+      {:error, :not_for_sale}
+    end
+  end
+
+  defp get_weapon_price(store, weapon, :value) do
+    item = Map.get(store, weapon)
+    if item, do: {:ok, item.price}, else: {:ok, 0}
+  end
+
+  defp get_cut_price(market, cut, amount) do
     if Map.get(market, cut) do
       {:ok, Map.get(market, cut).price * amount}
     else
@@ -219,19 +394,23 @@ defmodule FutureButcherEngine.Game do
     amount = if (transaction_type == :buy), do: amount * -1, else: amount
 
     put_in(state_data, access_cut_value(cut, :quantity),
-      Map.get(state_data.station.market, cut).quantity + amount)
+    Map.get(state_data.station.market, cut).quantity + amount)
   end
 
   defp update_player(state_data, player), do: %{state_data | player: player}
 
   defp update_rules(state_data, rules), do: %{state_data | rules: rules}
 
+  defp decrement_turn(rules, turns) do
+    rules |> Map.put(:turns_left, Map.get(rules, :turns_left) - turns)
+  end
+
   defp travel_to(state_data, station) do
-    %{state_data | station: Station.new(station)}
+    %{state_data | station: Station.new(station, state_data.rules.turns_left)}
   end
 
 
-  # Replies
+  # Replies ====================================================================
 
   defp reply_success(state_data, reply) do
     :ets.insert(:game_state, {state_data.player.player_name, state_data})

@@ -17,7 +17,6 @@ defmodule FutureButcherEngine.Rules do
   end
 
   def check(%Rules{state: :initialized} = rules, :start_game) do
-    rules = decrement_turn(rules)
     {:ok, %Rules{rules | state: :in_game}}
   end
 
@@ -41,19 +40,43 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
-  def check(%Rules{state: :in_game, turns_left: 0} = rules, :change_station) do
+  def check(%Rules{state: :in_game, turns_left: 0} = rules, :end_transit) do
     {:game_over, %Rules{rules | state: :game_over}}
   end
 
-  def check(%Rules{state: :in_game} = rules, :change_station) do
-    rules = decrement_turn(rules)
+  def check(%Rules{state: :in_game} = rules, :end_transit) do
+    {:ok, %Rules{rules | state: :in_game}}
+  end
+
+  def check(%Rules{state: :in_game} = rules, :mugging) do
+    {:ok, %Rules{rules | state: :mugging}}
+  end
+
+  def check(%Rules{state: :mugging, turns_left: turns_left} = rules, :fight_mugger)
+  when turns_left > 0 do
+    {:ok, %Rules{rules | state: :in_game}}
+  end
+
+  def check(%Rules{state: :mugging} = rules, :pay_mugger) do
+    {:ok, %Rules{rules | state: :in_game}}
+  end
+
+  def check(%Rules{state: :in_game} = rules, :buy_pack) do
+    {:ok, %Rules{rules | state: :in_game}}
+  end
+
+  def check(%Rules{state: :in_game} = rules, :buy_weapon) do
+    {:ok, %Rules{rules | state: :in_game}}
+  end
+
+  def check(%Rules{state: :in_game} = rules, :replace_weapon) do
+    {:ok, %Rules{rules | state: :in_game}}
+  end
+
+  def check(%Rules{state: :in_game} = rules, :drop_weapon) do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
   def check(_state, _action), do: {:error, :violates_current_rules}
-
-  defp decrement_turn(rules) do
-    rules |> Map.put(:turns_left, Map.get(rules, :turns_left) - 1)
-  end
 
 end

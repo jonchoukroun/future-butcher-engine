@@ -1,42 +1,132 @@
 defmodule FutureButcherEngine.Station do
-  alias FutureButcherEngine.{Cut, Station}
+  alias FutureButcherEngine.{Cut, Station, Weapon, Pack}
 
-  @enforce_keys [:station_name, :market]
-  defstruct [:station_name, :market]
+  @enforce_keys [:station_name, :market, :store]
+  defstruct [:station_name, :market, :store]
 
-  @cuts [:flank, :heart, :liver, :loin, :ribs]
-  @stations [:downtown, :venice_beach, :koreatown, :culver_city, :silverlake]
+  @stations %{
+    :beverly_hills => %{ :base_crime_rate => 1 },
+    :downtown      => %{ :base_crime_rate => 2 },
+    :venice_beach  => %{ :base_crime_rate => 3 },
+    :hollywood     => %{ :base_crime_rate => 4 },
+    :compton       => %{ :base_crime_rate => 5 }
+  }
 
-  def new(station) when station in @stations do
-    %Station{station_name: station, market: generate_market()}
+  @station_names [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
+
+  def station_names, do: @station_names
+
+  def get_base_crime_rate(station) when station in @station_names do
+    @stations[station].base_crime_rate
+  end
+  def get_base_crime_rate(_station), do: {:error, :invalid_station}
+
+  def new(station, turns_left) when station == :venice_beach do
+    %Station{
+      station_name: station,
+      market:       generate_market(station, turns_left),
+      store:        generate_store(turns_left)
+    }
   end
 
-  def new(_), do: {:error, :invalid_station}
-
-  defp generate_market() do
-    Map.new(@cuts, fn type -> {type, generate_cut(type)} end)
+  def new(station, turns_left) when station in @station_names do
+    %Station{
+      station_name: station,
+      market:       generate_market(station, turns_left),
+      store:        nil
+    }
   end
 
-  def generate_cut(type) do
-    quantity = generate_quantity(type)
-    %{quantity: quantity, price: get_price(quantity, type)}
+  def new(_station, _turns_left), do: {:error, :invalid_station}
+
+
+  # Store ----------------------------------------------------------------------
+
+  def generate_store(turns_left) when turns_left > 20, do: %{}
+
+  def generate_store(turns_left) when turns_left <= 15 do
+    generate_weapons_stock(turns_left)
+    |> Enum.concat(generate_packs_stock(turns_left))
+    |> Map.new()
   end
 
-  defp get_price(quantity, type) when quantity > 0 do
-    {:ok, current_price} = Cut.new(type, quantity)
+  def generate_store(turns_left) do
+    generate_weapons_stock(turns_left)
+    |> Map.new()
+  end
+
+  def generate_weapons_stock(turns_left) do
+    select_available_stock(Weapon.weapon_types)
+    |> Enum.map(fn weapon -> {weapon, %{
+        price:  Weapon.generate_price(weapon, turns_left),
+        weight: Weapon.get_weight(weapon)
+        }} end)
+  end
+
+  def generate_packs_stock(turns_left) do
+    select_available_stock(Pack.pack_types)
+    |> Enum.map(fn pack -> {pack, %{
+        price:      Pack.generate_price(pack, turns_left),
+        pack_space: Pack.get_pack_space(pack)
+        }} end)
+  end
+
+  defp select_available_stock(inventory) do
+    inventory
+    |> Enum.reject(fn _item -> Enum.random(1..10) < 6 end)
+  end
+
+
+
+  # Market ---------------------------------------------------------------------
+
+  defp generate_market(station, turns_left) do
+    Map.new(Cut.cut_names, fn cut -> {cut, generate_cut(cut, station, turns_left)} end)
+  end
+
+  defp generate_cut(cut, station, turns_left) do
+    quantity = generate_quantity(cut, station, turns_left)
+    %{quantity: quantity, price: get_price(quantity, cut)}
+  end
+
+  defp generate_quantity(cut, station, turns_left) do
+    base_max = Cut.maximum_quantity(cut)
+    range    = generate_adjusted_range(station, turns_left)
+    max      = base_max - (base_max * ((1 - range) / 2)) |> round()
+    min      = base_max * ((1 - range) / 2) + 1 |> round()
+    Enum.random(min..max)
+  end
+
+  defp generate_adjusted_range(station, turns_left) when turns_left > 20 do
+    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.5)
+  end
+
+  defp generate_adjusted_range(station, turns_left) when turns_left > 15 do
+    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.6)
+  end
+
+  defp generate_adjusted_range(station, turns_left) when turns_left > 10 do
+    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.7)
+  end
+
+  defp generate_adjusted_range(station, turns_left) when turns_left > 5 do
+    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.8)
+  end
+
+  defp generate_adjusted_range(station, turns_left) when turns_left <= 5 do
+    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.9)
+  end
+
+  defp generate_adjusted_range(_station, _turns_left), do: {:error, :invalid_station_values}
+
+  defp validate_range_value(range) when range > 1, do: 1.0
+  defp validate_range_value(range), do: range
+
+  defp get_price(quantity, cut) when quantity > 0 do
+    {:ok, current_price} = Cut.new(cut, quantity)
     current_price.price
   end
 
-  defp get_price(_quantity, _type), do: nil
+  defp get_price(_quantity, _cut), do: nil
 
-  defp generate_quantity(type) do
-    Enum.random(0..max_quantities(type))
-  end
-
-  defp max_quantities(:flank), do: 20
-  defp max_quantities(:heart), do: 10
-  defp max_quantities(:liver), do: 100
-  defp max_quantities(:loin), do: 45
-  defp max_quantities(:ribs), do: 30
-  defp max_quantities(_), do: {:error, :invalid_cut_type}
 end

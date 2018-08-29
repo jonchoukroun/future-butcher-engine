@@ -1,24 +1,46 @@
 defmodule FutureButcherEngine.Player do
-  alias __MODULE__
+  alias FutureButcherEngine.{Player, Weapon}
 
-  @enforce_keys [:player_name, :health, :funds, :debt, :rate, :pack]
-  defstruct [:player_name, :health, :funds, :debt, :rate, :pack]
+  @enforce_keys [:player_name, :funds, :debt, :rate, :pack, :pack_space, :weapon]
+  defstruct     [:player_name, :funds, :debt, :rate, :pack, :pack_space, :weapon]
 
-  @max_health 100
-  @max_space 20
-  @cut_keys [:flank, :heart, :loin, :liver, :ribs]
+  @base_space  20
+  @cut_keys    [:flank, :heart, :loin, :liver, :ribs]
+  @weapon_type [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
+
+
+  # New player ----------------------------------------------------------------
 
   def new(player_name) when is_binary(player_name) do
     %Player{
       player_name: player_name,
-      health: @max_health,
       funds: 0, debt: 0, rate: 0.0,
-      pack: initialize_pack()}
+      pack: initialize_pack(),
+      pack_space: @base_space,
+      weapon: nil
+    }
   end
 
-  def new(_name) do
-    {:error, :invalid_player_name}
+  def new(_name), do: {:error, :invalid_player_name}
+
+  defp initialize_pack do
+    Map.new(@cut_keys, fn cut -> {cut, 0} end)
   end
+
+
+  # Packs ----------------------------------------------------------------------
+
+  def buy_pack(%Player{funds: funds}, _, cost) when funds < cost, do: {:error, :insufficient_funds}
+
+  def buy_pack(%Player{pack_space: current_space}, new_space, _cost)
+  when current_space >= new_space, do: {:error, :no_pack_upgrade}
+
+  def buy_pack(player, pack_space, cost) do
+    adjust_funds(Map.put(player, :pack_space, pack_space), :decrease, cost)
+  end
+
+
+  # Debt/Loans -----------------------------------------------------------------
 
   def buy_loan(%Player{debt: debt, rate: rate}, _debt, _rate) when debt > 0 and rate > 0 do
     {:error, :already_has_debt}
@@ -37,29 +59,6 @@ defmodule FutureButcherEngine.Player do
 
   def buy_loan(_player, _debt, _rate) do
     {:error, :invalid_loan_values}
-  end
-
-  def buy_cut(player, cut, amount, cost) do
-    with {:ok} <- sufficient_funds?(player, cost),
-         {:ok} <- sufficient_space?(player, amount)
-     do
-      {:ok, player} = adjust_funds(player, :decrease, cost)
-      {:ok, player
-            |> Map.put(:pack, increase_cut(player.pack, cut, amount))}
-    else
-      {:error, msg} -> {:error, msg}
-    end
-  end
-
-  def sell_cut(player, cut, amount, profit) do
-    with {:ok} <- sufficient_cuts?(player.pack, cut, amount)
-    do
-      {:ok, player} = adjust_funds(player, :increase, profit)
-      {:ok, player
-            |> Map.put(:pack, decrease_cut(player.pack, cut, amount))}
-    else
-      {:error, msg} -> {:error, msg}
-    end
   end
 
   def accrue_debt(%Player{debt: debt, rate: rate} = player) when debt > 0 do
@@ -86,8 +85,114 @@ defmodule FutureButcherEngine.Player do
 
   def pay_debt(_player, _amount), do: {:error, :insufficient_funds}
 
-  def adjust_funds(%Player{funds: funds} = player, :decrease, amount)
-  when amount > funds do
+
+  # Buy/Sell Cuts --------------------------------------------------------------
+
+  def buy_cut(%Player{funds: funds}, _cut, _amount, cost) when funds < cost do
+    {:error, :insufficient_funds}
+  end
+
+  def buy_cut(player, cut, amount, cost) do
+    with {:ok} <- sufficient_space?(player, amount) do
+      {:ok, player} = adjust_funds(player, :decrease, cost)
+      {:ok, player |> Map.put(:pack, increase_cut(player.pack, cut, amount))}
+    else
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def sell_cut(player, cut, amount, profit) do
+    with {:ok} <- sufficient_cuts?(player.pack, cut, amount) do
+      {:ok, player} = adjust_funds(player, :increase, profit)
+      {:ok, player |> Map.put(:pack, decrease_cut(player.pack, cut, amount))}
+    else
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+
+  # Weapons --------------------------------------------------------------------
+
+  def buy_weapon(%Player{weapon: weapon}, _weapon, _cost) when not is_nil(weapon) do
+    {:error, :already_owns_weapon}
+  end
+
+  def buy_weapon(%Player{funds: funds}, _weapon, cost) when funds < cost do
+    {:error, :insufficient_funds}
+  end
+
+  def buy_weapon(player, weapon, cost) when weapon in @weapon_type do
+    weapon_weight = Weapon.get_weight(weapon)
+    with {:ok} <- sufficient_space?(player, weapon_weight) do
+      {:ok, player} = adjust_funds(player, :decrease, cost)
+      {:ok, player |> Map.put(:weapon, weapon)}
+    else
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def buy_weapon(_player, _weapon, _cost), do: {:error, :invalid_weapon_type}
+
+  def replace_weapon(%Player{weapon: weapon}, _weapon, _cost, _value) when is_nil(weapon) do
+    {:error, :no_weapon_owned}
+  end
+
+  def replace_weapon(%Player{funds: funds}, _weapon, cost, value)
+  when Kernel.+(funds, value) < cost, do: {:error, :insufficient_funds}
+
+  def replace_weapon(%Player{weapon: current_weapon}, weapon, _cost, _value)
+  when current_weapon == weapon, do: {:error, :same_weapon_type}
+
+  def replace_weapon(player, weapon, cost, value) do
+    net_weapon_weight = Weapon.get_weight(weapon) - Weapon.get_weight(player.weapon)
+    with {:ok} <- sufficient_space?(player, net_weapon_weight) do
+      {:ok, player} = adjust_funds(player, :increase, value)
+      {:ok, player} = adjust_funds(player, :decrease, cost)
+      {:ok, player |> Map.replace!(:weapon, weapon)}
+    else
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def drop_weapon(%Player{weapon: nil}), do: {:error, :no_weapon_owned}
+  def drop_weapon(player), do: {:ok, player |> Map.replace!(:weapon, nil)}
+
+
+  # Muggings -------------------------------------------------------------------
+
+  def fight_mugger(%Player{weapon: nil} = player), do: {:ok, player, :defeat}
+
+  def fight_mugger(player) do
+    case Weapon.get_damage(player.weapon) <= Enum.random(1..10) do
+      true ->
+        harvest = harvest_mugger(player)
+        |> Enum.reduce(player.pack, fn cut, pack -> increase_cut(pack, cut, 1) end)
+        {:ok, player |> Map.put(:pack, harvest), :victory}
+      false ->
+        {:ok, player, :defeat}
+    end
+  end
+
+  def pay_mugger(%Player{pack: pack} = player, :cuts) do
+    case get_random_cut(pack) do
+      {:ok, cut, amount} -> {:ok, player |> Map.put(:pack, decrease_cut(pack, cut, amount))}
+                  :error -> {:error, :no_cuts_owned}
+    end
+  end
+
+  def pay_mugger(%Player{funds: funds}, :funds) when funds == 0, do: {:error, :insufficient_funds}
+
+  def pay_mugger(%Player{funds: funds} = player, :funds) do
+    funds_penalty = Enum.random(12..21) |> Kernel./(100) |> (fn n -> round(funds * n) end).()
+    {:ok, player |> decrease_attribute(:funds, funds_penalty)}
+  end
+
+  def pay_mugger(_player, _response), do: {:error, :invalid_mugging_response}
+
+
+  # Funds ----------------------------------------------------------------------
+
+  def adjust_funds(%Player{funds: funds} = player, :decrease, amount) when amount > funds do
     {:ok, player |> Map.put(:funds, 0)}
   end
 
@@ -99,38 +204,30 @@ defmodule FutureButcherEngine.Player do
     {:ok, player |> increase_attribute(:funds, amount)}
   end
 
-  # def adjust_health(%Player{health: health} = player, :heal, amount)
-  # when amount + health > @max_health do
-  #   {:ok, player |> increase_attribute(:health, (@max_health - health))}
-  # end
-  #
-  # def adjust_health(player, :heal, amount) do
-  #   {:ok, player |> increase_attribute(:health, amount)}
-  # end
-  #
-  # def adjust_health(%Player{health: health}, :hurt, amount)
-  # when amount > health do
-  #     {:ok, :player_dead}
-  # end
-  #
-  # def adjust_health(player, :hurt, amount) do
-  #   {:ok, player |> decrease_attribute(:health, amount)}
-  # end
 
-  defp initialize_pack do
-    Map.new(@cut_keys, fn cut -> {cut, 0} end)
+  # Validations ----------------------------------------------------------------
+
+  defp get_random_cut(pack) do
+    owned_cuts = Enum.filter(pack, fn(cut) -> elem(cut, 1) > 0 end)
+    case Enum.count(owned_cuts) do
+      0  -> :error
+      _n ->
+        cut_penalty = Enum.random(owned_cuts)
+        {:ok, elem(cut_penalty, 0), elem(cut_penalty, 1)}
+    end
   end
 
-  defp sufficient_funds?(player, cost) do
-    if (player.funds >= cost), do: {:ok}, else: {:error, :insufficient_funds}
+  defp get_weight_carried(player) do
+    weapon_weight = if player.weapon, do: Weapon.get_weight(player.weapon), else: 0
+
+    player.pack
+    |> Map.values()
+    |> Enum.reduce(0, fn cut, acc -> cut + acc end)
+    |> Kernel.+(weapon_weight)
   end
 
   defp sufficient_space?(player, amount) do
-    space_taken = player.pack
-    |> Map.values
-    |> Enum.reduce(0, fn(x, acc) -> x + acc end)
-
-    if space_taken + amount <= @max_space do
+    if get_weight_carried(player) + amount <= player.pack_space do
       {:ok}
     else
       {:error, :insufficient_pack_space}
@@ -143,6 +240,18 @@ defmodule FutureButcherEngine.Player do
     else
       {:error, :insufficient_cuts}
     end
+  end
+
+
+  # Property updates -----------------------------------------------------------
+
+  defp harvest_mugger(player) do
+    Weapon.get_cuts(player.weapon)
+    |> Enum.reject(fn _cut -> Enum.random(0..10) >= 4 end)
+    |> Enum.map_reduce(get_weight_carried(player), fn cut, acc ->
+      {(if player.pack_space > acc, do: cut), (acc + 1)} end)
+    |> elem(0)
+    |> Enum.reject(fn cut -> is_nil(cut) end)
   end
 
   defp increase_cut(pack, cut, amount) do
