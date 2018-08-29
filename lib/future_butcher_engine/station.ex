@@ -1,5 +1,5 @@
 defmodule FutureButcherEngine.Station do
-  alias FutureButcherEngine.{Cut, Station, Weapon}
+  alias FutureButcherEngine.{Cut, Station, Weapon, Pack}
 
   @enforce_keys [:station_name, :market, :store]
   defstruct [:station_name, :market, :store]
@@ -42,19 +42,40 @@ defmodule FutureButcherEngine.Station do
 
   # Store ----------------------------------------------------------------------
 
-  def generate_store(turns_left) do
-    select_available_weapons(Weapon.weapon_types)
-    |> Enum.map(fn weapon -> {weapon, %{
-        price: Weapon.generate_price(weapon, turns_left),
-        weight: Weapon.get_weight(weapon)
-        }} end)
+  def generate_store(turns_left) when turns_left > 20, do: %{}
+
+  def generate_store(turns_left) when turns_left <= 15 do
+    generate_weapons_stock(turns_left)
+    |> Enum.concat(generate_packs_stock(turns_left))
     |> Map.new()
   end
 
-  defp select_available_weapons(weapons) do
-    weapons
-    |> Enum.reject(fn _weapon -> Enum.random(1..10) < 6 end)
+  def generate_store(turns_left) do
+    generate_weapons_stock(turns_left)
+    |> Map.new()
   end
+
+  def generate_weapons_stock(turns_left) do
+    select_available_stock(Weapon.weapon_types)
+    |> Enum.map(fn weapon -> {weapon, %{
+        price:  Weapon.generate_price(weapon, turns_left),
+        weight: Weapon.get_weight(weapon)
+        }} end)
+  end
+
+  def generate_packs_stock(turns_left) do
+    select_available_stock(Pack.pack_types)
+    |> Enum.map(fn pack -> {pack, %{
+        price:      Pack.generate_price(pack, turns_left),
+        pack_space: Pack.get_pack_space(pack)
+        }} end)
+  end
+
+  defp select_available_stock(inventory) do
+    inventory
+    |> Enum.reject(fn _item -> Enum.random(1..10) < 6 end)
+  end
+
 
 
   # Market ---------------------------------------------------------------------
