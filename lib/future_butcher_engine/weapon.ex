@@ -1,11 +1,8 @@
 defmodule FutureButcherEngine.Weapon do
 
-  @enforce_keys [:type, :damage, :weight, :cuts]
-  defstruct [:type, :damage, :weight, :cuts]
-
   @weapons %{
-    :hedge_clippers => %{:damage => 6, :weight => 4, :cuts => [:ribs, :flank]},
-    :hockey_stick   => %{:damage => 5, :weight => 5, :cuts => []},
+    :hedge_clippers => %{:damage => 4, :weight => 3, :cuts => [:ribs, :flank, :liver]},
+    :hockey_stick   => %{:damage => 8, :weight => 5, :cuts => []},
     :brass_knuckles => %{:damage => 4, :weight => 1, :cuts => []},
     :box_cutter     => %{:damage => 3, :weight => 1, :cuts => [:loin, :heart, :liver, :flank]},
     :machete        => %{:damage => 7, :weight => 2, :cuts => [:ribs, :loin, :flank]}
@@ -19,10 +16,9 @@ defmodule FutureButcherEngine.Weapon do
     Enum.count(get_cuts(weapon))
     |> Kernel.+(1)
     |> Kernel.*(get_damage(weapon))
-    |> Kernel./(turns_left / 3)
-    |> :math.pow(2)
-    |> Kernel./(get_weight(weapon))
-    |> Kernel.*(700)
+    |> Kernel./(get_weight(weapon) / 2)
+    |> Kernel./(turns_left)
+    |> Kernel.*(5000)
     |> round()
   end
 
