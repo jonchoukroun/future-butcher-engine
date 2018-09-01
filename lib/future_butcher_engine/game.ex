@@ -80,8 +80,8 @@ defmodule FutureButcherEngine.Game do
 
   # Items ----------------------------------------------------------------------
 
-  def buy_pack(game, pack_space, cost) do
-    GenServer.call(game, {:buy_pack, pack_space, cost})
+  def buy_pack(game, pack) do
+    GenServer.call(game, {:buy_pack, pack})
   end
 
   def buy_weapon(game, weapon) do
@@ -248,9 +248,10 @@ defmodule FutureButcherEngine.Game do
 
   # Items ----------------------------------------------------------------------
 
-  def handle_call({:buy_pack, pack_space, cost}, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
-        {:ok, player} <- Player.buy_pack(state_data.player, pack_space, cost)
+  def handle_call({:buy_pack, pack}, _from, state_data) do
+    with            {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
+         {:ok, pack_space, cost} <- get_pack_details(state_data.station.store, pack),
+                  {:ok, player} <- Player.buy_pack(state_data.player, pack_space, cost)
     do
       state_data
       |> update_rules(rules)
@@ -360,6 +361,14 @@ defmodule FutureButcherEngine.Game do
   end
 
   defp generate_turns_penalty(_turns_left, _outcome), do: {:error, :invalid_outcome}
+
+  defp get_pack_details(store, pack) do
+    if Map.get(store, pack) do
+      {:ok, Map.get(store, pack).pack_space, Map.get(store, pack).price}
+    else
+      {:error, :not_for_sale}
+    end
+  end
 
   defp get_weapon_price(store, weapon, :cost) do
     if Map.get(store, weapon) do
