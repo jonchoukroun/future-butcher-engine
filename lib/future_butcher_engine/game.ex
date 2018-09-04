@@ -335,7 +335,7 @@ defmodule FutureButcherEngine.Game do
   # Computations ===============================================================
 
   defp initiate_random_occurence(_pack_space, turns_left, _destination)
-  when turns_left === 0, do: {:ok, :end_transit}
+  when turns_left === 1 or turns_left === 0, do: {:ok, :end_transit}
 
   defp initiate_random_occurence(pack_space, turns_left, destination) do
     base_crime_rate = Station.get_base_crime_rate(destination)
