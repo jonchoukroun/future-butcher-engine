@@ -42,7 +42,7 @@ defmodule FutureButcherEngine.Station do
 
   # Store ----------------------------------------------------------------------
 
-  def generate_store(turns_left) when turns_left > 20, do: %{}
+  def generate_store(turns_left) when turns_left > 18, do: %{}
 
   def generate_store(turns_left) when turns_left <= 10 do
     generate_weapons_stock(turns_left)
