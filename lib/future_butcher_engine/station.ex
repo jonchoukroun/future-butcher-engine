@@ -44,7 +44,7 @@ defmodule FutureButcherEngine.Station do
 
   def generate_store(turns_left) when turns_left > 18, do: %{}
 
-  def generate_store(turns_left) when turns_left <= 10 do
+  def generate_store(turns_left) when turns_left <= 12 do
     generate_weapons_stock(turns_left)
     |> Enum.concat(generate_packs_stock(turns_left))
     |> Map.new()
