@@ -18,7 +18,7 @@ defmodule FutureButcherEngine.Weapon do
     |> Kernel.*(get_damage(weapon))
     |> Kernel./(get_weight(weapon) / 2)
     |> Kernel./(turns_left)
-    |> Kernel.*(5000)
+    |> Kernel.*(8000)
     |> round()
   end
 
