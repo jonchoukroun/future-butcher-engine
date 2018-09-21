@@ -340,10 +340,10 @@ defmodule FutureButcherEngine.Game do
   defp initiate_random_occurence(pack_space, turns_left, destination) do
     base_crime_rate  = Station.get_base_crime_rate(destination)
     current_turn     = 25 - turns_left
-    visibility_bonus = (pack_space - 20) / 100
+    visibility_bonus = (pack_space - 20) / 500
     p = :math.sin(current_turn / 20)
-        |> :math.pow(6 - base_crime_rate)
-        |> Kernel.+(visibility_adjustment)
+        |> :math.pow(10 - base_crime_rate)
+        |> Kernel.+(visibility_bonus)
         |> Float.round(2)
 
     case :rand.uniform > p do
