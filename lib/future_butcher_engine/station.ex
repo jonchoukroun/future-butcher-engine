@@ -5,16 +5,33 @@ defmodule FutureButcherEngine.Station do
   defstruct [:station_name, :market, :store]
 
   @stations %{
-    :beverly_hills => %{ :base_crime_rate => 1 },
-    :downtown      => %{ :base_crime_rate => 2 },
-    :venice_beach  => %{ :base_crime_rate => 3 },
-    :hollywood     => %{ :base_crime_rate => 4 },
-    :compton       => %{ :base_crime_rate => 5 }
+    :beverly_hills => %{
+      :base_crime_rate => 1,
+      :cuts_list => [:heart, :flank, :ribs]
+    },
+    :downtown => %{
+      :base_crime_rate => 2,
+      :cuts_list => [:heart, :ribs, :loin]
+    },
+    :venice_beach => %{
+      :base_crime_rate => 3,
+      :cuts_list => [:flank, :ribs, :loin, :liver]
+    },
+    :hollywood => %{
+      :base_crime_rate => 4,
+      :cuts_list => [:ribs, :loin, :liver]
+    },
+    :compton => %{
+      :base_crime_rate => 5,
+      :cuts_list => Cut.cut_names
+    }
   }
 
   @station_names [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
 
   def station_names, do: @station_names
+
+  def station_cuts(station), do: @stations[station].cuts_list
 
   def get_base_crime_rate(station) when station in @station_names do
     @stations[station].base_crime_rate
@@ -59,6 +76,7 @@ defmodule FutureButcherEngine.Station do
           |> round()
     {:ok, fee}
   end
+
 
   # Mugging --------------------------------------------------------------------
 
@@ -121,7 +139,7 @@ defmodule FutureButcherEngine.Station do
   # Market ---------------------------------------------------------------------
 
   defp generate_market(station, turns_left) do
-    Map.new(Cut.cut_names, fn cut -> {cut, generate_cut(cut, station, turns_left)} end)
+    Map.new(station_cuts(station), fn cut -> {cut, generate_cut(cut, station, turns_left)} end)
   end
 
   defp generate_cut(cut, station, turns_left) do
