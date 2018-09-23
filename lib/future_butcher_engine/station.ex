@@ -53,11 +53,12 @@ defmodule FutureButcherEngine.Station do
   def generate_entry_fee(station, turns_left) do
     crime_rate   = get_base_crime_rate(station)
     current_turn = 25 - turns_left
-    {:ok, (:math.pow(current_turn, 3) / crime_rate) + (5000 / crime_rate) |> round()}
+    fee = 2 * (5 - crime_rate) * :math.pow(current_turn, 2)
+          |> Kernel.-(100 * crime_rate)
+          |> Kernel.+(400)
+          |> round()
+    {:ok, fee}
   end
-
-  def generate_entry_fee(_station, _turns_left), do: {:error, :invalid_entry_fee_inputs}
-
 
   # Mugging --------------------------------------------------------------------
 
