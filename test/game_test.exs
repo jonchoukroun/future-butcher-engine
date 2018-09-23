@@ -1,6 +1,6 @@
 defmodule GameTest do
   use ExUnit.Case
-  alias FutureButcherEngine.{Game, GameSupervisor, Rules, Player}
+  alias FutureButcherEngine.{Game, GameSupervisor, Rules, Player, Station}
 
 
   # Game init ------------------------------------------------------------------
@@ -78,13 +78,62 @@ defmodule GameTest do
     end
 
     test "should return error if buying loan outside downtown", context do
-      # may error on offchance of mugging
-      Game.change_station(context.game, :compton)
+      state_data = :sys.get_state(context.game)
+      invalid_station = %Station{state_data.station | station_name: :comption}
+      :sys.replace_state(context.game, fn _state -> %{state_data | station: invalid_station} end)
+
       assert Game.buy_loan(context.game, 5000, 0.2) === :must_be_downtown
     end
+
+    test "should return error if already in debt", context do
+      base_state = :sys.get_state(context.game)
+      invalid_player = %Player{base_state.player | debt: 4000, rate: 0.2}
+      :sys.replace_state(context.game, fn _state -> %{base_state | player: invalid_player} end)
+
+      assert Game.buy_loan(context.game, 5000, 0.2) === :already_has_debt
+    end
+
   end
 
   describe ".pay_loan" do
+    setup _context do
+      {:ok, game} = GameSupervisor.start_game("Frank")
+      Game.start_game(game)
+      Game.buy_loan(game, 5000, 0.2)
+
+      state_data = :sys.get_state(game)
+      test_player = %Player{state_data.player | funds: 10000}
+      :sys.replace_state(game, fn _state -> %{state_data | player: test_player} end)
+
+      on_exit fn -> GameSupervisor.stop_game("Frank") end
+
+      %{game: game}
+    end
+
+    test "should reduce funds and clear debt, rate", context do
+      Game.pay_debt(context.game, :sys.get_state(context.game).player.debt)
+      test_data = :sys.get_state(context.game)
+
+      assert test_data.player.funds === 5000
+      assert test_data.player.debt === 0
+      assert test_data.player.rate === 0.0
+    end
+
+    test "should return error when not downtown", context do
+      base_state = :sys.get_state(context.game)
+      invalid_station = %Station{base_state.station | station_name: :beverly_hills}
+      :sys.replace_state(context.game, fn _state -> %{base_state | station: invalid_station} end)
+
+      assert Game.pay_debt(context.game, base_state.player.debt) === :must_be_downtown
+    end
+
+    test "should return error if funds is less then debt", context do
+      base_state = :sys.get_state(context.game)
+      invalid_player = %Player{base_state.player | funds: 100}
+      :sys.replace_state(context.game, fn _state -> %{base_state | player: invalid_player} end)
+
+      assert Game.pay_debt(context.game, base_state.player.debt) === :insufficient_funds
+    end
   end
 
   # Buy/sell cuts --------------------------------------------------------------
