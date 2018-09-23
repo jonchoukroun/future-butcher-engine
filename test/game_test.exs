@@ -141,7 +141,7 @@ defmodule GameTest do
 
   # Travel/transit -------------------------------------------------------------
 
-  describe ".change_station when in game" do
+  describe ".change_station" do
     setup _context do
       {:ok, game}       = GameSupervisor.start_game("Frank")
       Game.start_game(game)
@@ -153,38 +153,42 @@ defmodule GameTest do
       %{base_state: base_state, test_state: test_state, game: game}
     end
 
-    test "changes game state", context do
+    test "should update game state", context do
       random_occurence_outcomes = [:mugging, :in_game]
       assert Enum.member?(random_occurence_outcomes, context.test_state.rules.state)
     end
 
-    test "station is updated", context do
+    test "should update station name", context do
       assert context.test_state.station.station_name == :compton
     end
 
-    test "decrements turn by 1", context do
+    test "should decrement turns left", context do
       assert context.base_state.rules.turns_left - context.test_state.rules.turns_left == 1
     end
 
-    test "with exisitng player debt rate accrues debt", context do
+    test "should accrue player debt", context do
       assert context.test_state.player.rate === 0.2
       assert context.test_state.player.debt === 6000
     end
 
-    test "to compton should charge no entry fee", context do
+    test "should not charge entry fee in compton", context do
       assert context.base_state.player.funds === context.test_state.player.funds
     end
 
-    test "to other stations should charge entry fee", context do
+    test "should charge entry fee in other stations", context do
       {:ok, travel_state} = Game.change_station(context.game, :hollywood)
       assert context.base_state.player.funds > travel_state.player.funds
     end
 
     test "should return error when entry fee is too expensive", context do
+      base_state = :sys.get_state(context.game)
+      invalid_player = %Player{base_state.player | funds: 5}
+      :sys.replace_state(context.game, fn _state -> %{base_state | player: invalid_player} end)
+
       assert Game.change_station(context.game, :beverly_hills) === :insufficient_funds
     end
 
-    test "with 0 turns left ends game", context do
+    test "should return end game with no turns left", context do
       test_rules = %Rules{context.test_state.rules | turns_left: 0}
       :sys.replace_state context.game, fn _state -> %{context.test_state | rules: test_rules} end
 
@@ -194,6 +198,9 @@ defmodule GameTest do
       assert end_state.rules.state === :game_over
     end
   end
+
+
+  # Muggings -------------------------------------------------------------------
 
   describe ".fight_mugger" do
     setup _context do
