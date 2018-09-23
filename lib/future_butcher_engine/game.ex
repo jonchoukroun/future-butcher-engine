@@ -336,7 +336,7 @@ defmodule FutureButcherEngine.Game do
 
   defp generate_turns_penalty(_turns_left, :victory), do: {:ok, 0}
 
-  defp generate_turns_penalty(turns_left, :defeat) when turns_left === 1, do: {:ok, turns_left}
+  defp generate_turns_penalty(1, :defeat), do: {:ok, turns_left}
 
   defp generate_turns_penalty(turns_left, :defeat) do
     {:ok, Enum.random(1..Enum.min([turns_left, 4]))}
@@ -373,8 +373,7 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  defp access_cut_value(cut, k)
-  when k in [:price, :quantity] do
+  defp access_cut_value(cut, k) when k in [:price, :quantity] do
     [Access.key(:station), Access.key(:market), Access.key(cut), Access.key(k)]
   end
 
