@@ -134,8 +134,9 @@ defmodule FutureButcherEngine.Game do
   # Debt/loans -----------------------------------------------------------------
 
   def handle_call({:buy_loan, debt, rate}, _from, state_data) do
-    with {:ok, rules}  <- Rules.check(state_data.rules, :buy_loan),
-         {:ok, player} <- Player.buy_loan(state_data.player, debt, rate)
+    with      {:ok} <- Station.validate_station(state_data.station.station_name, :loans),
+       {:ok, rules} <- Rules.check(state_data.rules, :buy_loan),
+      {:ok, player} <- Player.buy_loan(state_data.player, debt, rate)
     do
       state_data
       |> update_rules(rules)
@@ -147,8 +148,9 @@ defmodule FutureButcherEngine.Game do
   end
 
   def handle_call({:pay_debt, amount}, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :pay_debt),
-        {:ok, player} <- Player.pay_debt(state_data.player, amount)
+    with      {:ok} <- Station.validate_station(state_data.station.station_name, :loans),
+       {:ok, rules} <- Rules.check(state_data.rules, :pay_debt),
+      {:ok, player} <- Player.pay_debt(state_data.player, amount)
     do
       state_data
       |> update_rules(rules)
