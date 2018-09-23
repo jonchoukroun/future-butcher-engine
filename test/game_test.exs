@@ -58,6 +58,34 @@ defmodule GameTest do
 
   # Debt/loans -----------------------------------------------------------------
 
+  describe ".buy_loan" do
+    setup _context do
+      {:ok, game} = GameSupervisor.start_game("Frank")
+      Game.start_game(game)
+
+      on_exit fn -> GameSupervisor.stop_game("Frank") end
+
+      %{game: game}
+    end
+
+    test "should increase funds, debt, and set rate", context do
+      Game.buy_loan(context.game, 5000, 0.2)
+      test_data = :sys.get_state context.game
+
+      assert test_data.player.funds === 5000
+      assert test_data.player.debt === 5000
+      assert test_data.player.rate === 0.2
+    end
+
+    test "should return error if buying loan outside downtown", context do
+      # may error on offchance of mugging
+      Game.change_station(context.game, :compton)
+      assert Game.buy_loan(context.game, 5000, 0.2) === :must_be_downtown
+    end
+  end
+
+  describe ".pay_loan" do
+  end
 
   # Buy/sell cuts --------------------------------------------------------------
 
