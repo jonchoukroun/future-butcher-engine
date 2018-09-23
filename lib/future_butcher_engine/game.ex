@@ -202,7 +202,9 @@ defmodule FutureButcherEngine.Game do
       {:ok, outcome} <- Station.random_encounter(
                           state_data.player.pack_space, state_data.rules.turns_left, destination),
         {:ok, rules} <- Rules.check(state_data.rules, outcome),
-       {:ok, player} <- Player.accrue_debt(state_data.player)
+       {:ok, player} <- Player.accrue_debt(state_data.player),
+          {:ok, fee} <- Station.generate_entry_fee(destination, state_data.rules.turns_left),
+       {:ok, player} <- Player.charge_fee(player, fee)
     do
       state_data
       |> update_rules(decrement_turn(rules, 1))
