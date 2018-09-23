@@ -35,12 +35,13 @@ defmodule FutureButcherEngine.StationTest do
 
   describe ".generate_entry_fee" do
     test "compton should generate no fee" do
-      assert Station.generate_entry_fee(:compton, 10) === 0
+      assert Station.generate_entry_fee(:compton, 10) === {:ok, 0}
     end
 
     test "other stations should increase in price over time" do
-      assert Station.generate_entry_fee(:beverly_hills, 24) <
-        Station.generate_entry_fee(:beverly_hills, 10)
+      {:ok, early_fee} = Station.generate_entry_fee(:beverly_hills, 24)
+      {:ok, late_fee} = Station.generate_entry_fee(:beverly_hills, 10)
+      assert early_fee < late_fee
     end
   end
 
