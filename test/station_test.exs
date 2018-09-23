@@ -33,6 +33,17 @@ defmodule FutureButcherEngine.StationTest do
     assert Station.new(:bullshit_name, 25) == {:error, :invalid_station}
   end
 
+  describe ".generate_entry_fee" do
+    test "compton should generate no fee" do
+      assert Station.generate_entry_fee(:compton, 10) === 0
+    end
+
+    test "other stations should increase in price over time" do
+      assert Station.generate_entry_fee(:beverly_hills, 24) <
+        Station.generate_entry_fee(:beverly_hills, 10)
+    end
+  end
+
   test "Market generated at low crime station in early game is reduced in range" do
     station = Station.new(:beverly_hills, 25)
     range   = 0.6
