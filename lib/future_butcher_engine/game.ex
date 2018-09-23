@@ -336,7 +336,7 @@ defmodule FutureButcherEngine.Game do
 
   defp generate_turns_penalty(_turns_left, :victory), do: {:ok, 0}
 
-  defp generate_turns_penalty(1, :defeat), do: {:ok, turns_left}
+  defp generate_turns_penalty(1, :defeat), do: {:ok, 1}
 
   defp generate_turns_penalty(turns_left, :defeat) do
     {:ok, Enum.random(1..Enum.min([turns_left, 4]))}
