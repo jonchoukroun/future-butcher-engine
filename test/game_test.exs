@@ -94,6 +94,19 @@ defmodule GameTest do
       assert context.test_state.player.debt === 6000
     end
 
+    test "to compton should charge no entry fee", context do
+      assert context.base_state.player.funds === context.test_state.player.funds
+    end
+
+    test "to other stations should charge entry fee", context do
+      {:ok, travel_state} = Game.change_station(context.game, :hollywood)
+      assert context.base_state.player.funds > travel_state.player.funds
+    end
+
+    test "should return error when entry fee is too expensive", context do
+      assert Game.change_station(context.game, :beverly_hills) === :insufficient_funds
+    end
+
     test "with 0 turns left ends game", context do
       test_rules = %Rules{context.test_state.rules | turns_left: 0}
       :sys.replace_state context.game, fn _state -> %{context.test_state | rules: test_rules} end
