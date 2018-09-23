@@ -40,6 +40,26 @@ defmodule FutureButcherEngine.Station do
   def new(_station, _turns_left), do: {:error, :invalid_station}
 
 
+  # Mugging --------------------------------------------------------------------
+
+  def random_encounter(_space, turns_left, _station) when turns_left === 0, do: {:ok, :end_transit}
+
+  def random_encounter(pack_space, turns_left, station) do
+    base_crime_rate       = get_base_crime_rate(station)
+    current_turn          = 25 - turns_left
+    visibility_adjustment = (pack_space - 20) / 500
+
+    p = :math.sin((current_turn + base_crime_rate) / 25)
+        |> :math.pow(9 - base_crime_rate)
+        |> Kernel.+(visibility_adjustment)
+        |> Float.round(3)
+
+    case :rand.uniform > p do
+      true  -> {:ok, :end_transit}
+      false -> {:ok, :mugging}
+    end
+  end
+
   # Store ----------------------------------------------------------------------
 
   def generate_store(turns_left) when turns_left > 18, do: %{}
@@ -75,7 +95,6 @@ defmodule FutureButcherEngine.Station do
     inventory
     |> Enum.reject(fn _item -> Enum.random(1..10) < 6 end)
   end
-
 
 
   # Market ---------------------------------------------------------------------

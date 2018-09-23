@@ -199,7 +199,7 @@ defmodule FutureButcherEngine.Game do
 
   def handle_call({:change_station, destination}, _from, state_data) do
     with       {:ok} <- valid_destination?(state_data.station.station_name, destination),
-      {:ok, outcome} <- initiate_random_occurence(
+      {:ok, outcome} <- Station.random_encounter(
                           state_data.player.pack_space, state_data.rules.turns_left, destination),
         {:ok, rules} <- Rules.check(state_data.rules, outcome),
        {:ok, player} <- Player.accrue_debt(state_data.player)
@@ -333,25 +333,6 @@ defmodule FutureButcherEngine.Game do
 
 
   # Computations ===============================================================
-
-  defp initiate_random_occurence(_pack_space, turns_left, _destination)
-  when turns_left < 2, do: {:ok, :end_transit}
-
-  defp initiate_random_occurence(pack_space, turns_left, destination) do
-    base_crime_rate  = Station.get_base_crime_rate(destination)
-    current_turn     = 25 - turns_left
-    visibility_bonus = (pack_space - 20) / 500
-    p = :math.sin(current_turn / 20)
-        |> :math.pow(10 - base_crime_rate)
-        |> Kernel.+(visibility_bonus)
-        |> Float.round(2)
-
-    case :rand.uniform > p do
-      true  -> {:ok, :end_transit}
-      false -> {:ok, :mugging}
-    end
-
-  end
 
   defp generate_turns_penalty(_turns_left, :victory), do: {:ok, 0}
 
