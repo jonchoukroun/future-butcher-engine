@@ -5,16 +5,33 @@ defmodule FutureButcherEngine.Station do
   defstruct [:station_name, :market, :store]
 
   @stations %{
-    :beverly_hills => %{ :base_crime_rate => 1 },
-    :downtown      => %{ :base_crime_rate => 2 },
-    :venice_beach  => %{ :base_crime_rate => 3 },
-    :hollywood     => %{ :base_crime_rate => 4 },
-    :compton       => %{ :base_crime_rate => 5 }
+    :beverly_hills => %{
+      :base_crime_rate => 1,
+      :cuts_list => [:heart, :flank]
+    },
+    :downtown => %{
+      :base_crime_rate => 2,
+      :cuts_list => [:flank, :ribs]
+    },
+    :venice_beach => %{
+      :base_crime_rate => 3,
+      :cuts_list => [:ribs, :loin, :liver]
+    },
+    :hollywood => %{
+      :base_crime_rate => 4,
+      :cuts_list => [:ribs, :loin, :liver]
+    },
+    :compton => %{
+      :base_crime_rate => 5,
+      :cuts_list => Cut.cut_names
+    }
   }
 
   @station_names [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
 
   def station_names, do: @station_names
+
+  def station_cuts(station), do: @stations[station].cuts_list
 
   def get_base_crime_rate(station) when station in @station_names do
     @stations[station].base_crime_rate
@@ -40,11 +57,51 @@ defmodule FutureButcherEngine.Station do
   def new(_station, _turns_left), do: {:error, :invalid_station}
 
 
+  # Banking --------------------------------------------------------------------
+
+  def validate_station(:downtown, :loans), do: {:ok}
+  def validate_station(_station, :loans), do: {:error, :must_be_downtown}
+
+
+  # Entry fee ------------------------------------------------------------------
+
+  def generate_entry_fee(:compton, _turns_left), do: {:ok, 0}
+
+  def generate_entry_fee(station, turns_left) do
+    crime_rate   = get_base_crime_rate(station)
+    current_turn = 25 - turns_left
+    fee = 2 * (5 - crime_rate) * :math.pow(current_turn, 2) - (100 * crime_rate) + 500 |> round()
+    IO.inspect(fee, label: "fee")
+    {:ok, fee}
+  end
+
+
+  # Mugging --------------------------------------------------------------------
+
+  def random_encounter(_space, turns_left, _station) when turns_left === 0, do: {:ok, :end_transit}
+
+  def random_encounter(pack_space, turns_left, station) do
+    base_crime_rate       = get_base_crime_rate(station)
+    current_turn          = 25 - turns_left
+    visibility_adjustment = (pack_space - 20) / (250 * (6 - base_crime_rate))
+
+    p = :math.sin((current_turn + base_crime_rate) / 25)
+        |> :math.pow(8 - base_crime_rate)
+        |> Kernel.+(visibility_adjustment)
+        |> Float.round(3)
+
+    case :rand.uniform > p do
+      true  -> {:ok, :end_transit}
+      false -> {:ok, :mugging}
+    end
+  end
+
+
   # Store ----------------------------------------------------------------------
 
-  def generate_store(turns_left) when turns_left > 20, do: %{}
+  def generate_store(turns_left) when turns_left > 18, do: %{}
 
-  def generate_store(turns_left) when turns_left <= 15 do
+  def generate_store(turns_left) when turns_left <= 12 do
     generate_weapons_stock(turns_left)
     |> Enum.concat(generate_packs_stock(turns_left))
     |> Map.new()
@@ -77,11 +134,10 @@ defmodule FutureButcherEngine.Station do
   end
 
 
-
   # Market ---------------------------------------------------------------------
 
   defp generate_market(station, turns_left) do
-    Map.new(Cut.cut_names, fn cut -> {cut, generate_cut(cut, station, turns_left)} end)
+    Map.new(station_cuts(station), fn cut -> {cut, generate_cut(cut, station, turns_left)} end)
   end
 
   defp generate_cut(cut, station, turns_left) do
@@ -90,37 +146,8 @@ defmodule FutureButcherEngine.Station do
   end
 
   defp generate_quantity(cut, station, turns_left) do
-    base_max = Cut.maximum_quantity(cut)
-    range    = generate_adjusted_range(station, turns_left)
-    max      = base_max - (base_max * ((1 - range) / 2)) |> round()
-    min      = base_max * ((1 - range) / 2) + 1 |> round()
-    Enum.random(min..max)
+    Enum.random(0..Cut.maximum_quantity(cut))
   end
-
-  defp generate_adjusted_range(station, turns_left) when turns_left > 20 do
-    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.5)
-  end
-
-  defp generate_adjusted_range(station, turns_left) when turns_left > 15 do
-    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.6)
-  end
-
-  defp generate_adjusted_range(station, turns_left) when turns_left > 10 do
-    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.7)
-  end
-
-  defp generate_adjusted_range(station, turns_left) when turns_left > 5 do
-    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.8)
-  end
-
-  defp generate_adjusted_range(station, turns_left) when turns_left <= 5 do
-    validate_range_value((0.1 * @stations[station].base_crime_rate) + 0.9)
-  end
-
-  defp generate_adjusted_range(_station, _turns_left), do: {:error, :invalid_station_values}
-
-  defp validate_range_value(range) when range > 1, do: 1.0
-  defp validate_range_value(range), do: range
 
   defp get_price(quantity, cut) when quantity > 0 do
     {:ok, current_price} = Cut.new(cut, quantity)

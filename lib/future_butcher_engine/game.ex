@@ -80,8 +80,8 @@ defmodule FutureButcherEngine.Game do
 
   # Items ----------------------------------------------------------------------
 
-  def buy_pack(game, pack_space, cost) do
-    GenServer.call(game, {:buy_pack, pack_space, cost})
+  def buy_pack(game, pack) do
+    GenServer.call(game, {:buy_pack, pack})
   end
 
   def buy_weapon(game, weapon) do
@@ -134,8 +134,9 @@ defmodule FutureButcherEngine.Game do
   # Debt/loans -----------------------------------------------------------------
 
   def handle_call({:buy_loan, debt, rate}, _from, state_data) do
-    with {:ok, rules}  <- Rules.check(state_data.rules, :buy_loan),
-         {:ok, player} <- Player.buy_loan(state_data.player, debt, rate)
+    with      {:ok} <- Station.validate_station(state_data.station.station_name, :loans),
+       {:ok, rules} <- Rules.check(state_data.rules, :buy_loan),
+      {:ok, player} <- Player.buy_loan(state_data.player, debt, rate)
     do
       state_data
       |> update_rules(rules)
@@ -147,8 +148,9 @@ defmodule FutureButcherEngine.Game do
   end
 
   def handle_call({:pay_debt, amount}, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :pay_debt),
-        {:ok, player} <- Player.pay_debt(state_data.player, amount)
+    with      {:ok} <- Station.validate_station(state_data.station.station_name, :loans),
+       {:ok, rules} <- Rules.check(state_data.rules, :pay_debt),
+      {:ok, player} <- Player.pay_debt(state_data.player, amount)
     do
       state_data
       |> update_rules(rules)
@@ -199,10 +201,12 @@ defmodule FutureButcherEngine.Game do
 
   def handle_call({:change_station, destination}, _from, state_data) do
     with       {:ok} <- valid_destination?(state_data.station.station_name, destination),
-      {:ok, outcome} <- initiate_random_occurence(
+      {:ok, outcome} <- Station.random_encounter(
                           state_data.player.pack_space, state_data.rules.turns_left, destination),
         {:ok, rules} <- Rules.check(state_data.rules, outcome),
-       {:ok, player} <- Player.accrue_debt(state_data.player)
+       {:ok, player} <- Player.accrue_debt(state_data.player),
+          {:ok, fee} <- Station.generate_entry_fee(destination, state_data.rules.turns_left),
+       {:ok, player} <- Player.charge_fee(player, fee)
     do
       state_data
       |> update_rules(decrement_turn(rules, 1))
@@ -248,9 +252,10 @@ defmodule FutureButcherEngine.Game do
 
   # Items ----------------------------------------------------------------------
 
-  def handle_call({:buy_pack, pack_space, cost}, _from, state_data) do
-    with {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
-        {:ok, player} <- Player.buy_pack(state_data.player, pack_space, cost)
+  def handle_call({:buy_pack, pack}, _from, state_data) do
+    with            {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
+         {:ok, pack_space, cost} <- get_pack_details(state_data.station.store, pack),
+                  {:ok, player} <- Player.buy_pack(state_data.player, pack_space, cost)
     do
       state_data
       |> update_rules(rules)
@@ -333,33 +338,23 @@ defmodule FutureButcherEngine.Game do
 
   # Computations ===============================================================
 
-  defp initiate_random_occurence(_pack_space, turns_left, _destination)
-  when turns_left === 0, do: {:ok, :end_transit}
-
-  defp initiate_random_occurence(pack_space, turns_left, destination) do
-    base_crime_rate = Station.get_base_crime_rate(destination)
-    turns           = 25 - turns_left
-    p = (base_crime_rate / 100) * :math.pow(turns, 2)
-        |> Kernel.+(0.1 * turns)
-        |> Kernel.+(pack_space / 4)
-        |> Kernel./(100)
-
-    case :rand.uniform > p do
-      true  -> {:ok, :end_transit}
-      false -> {:ok, :mugging}
-    end
-
-  end
-
   defp generate_turns_penalty(_turns_left, :victory), do: {:ok, 0}
 
-  defp generate_turns_penalty(turns_left, :defeat) when turns_left === 1, do: {:ok, turns_left}
+  defp generate_turns_penalty(1, :defeat), do: {:ok, 1}
 
   defp generate_turns_penalty(turns_left, :defeat) do
     {:ok, Enum.random(1..Enum.min([turns_left, 4]))}
   end
 
   defp generate_turns_penalty(_turns_left, _outcome), do: {:error, :invalid_outcome}
+
+  defp get_pack_details(store, pack) do
+    if Map.get(store, pack) do
+      {:ok, Map.get(store, pack).pack_space, Map.get(store, pack).price}
+    else
+      {:error, :not_for_sale}
+    end
+  end
 
   defp get_weapon_price(store, weapon, :cost) do
     if Map.get(store, weapon) do
@@ -382,8 +377,7 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  defp access_cut_value(cut, k)
-  when k in [:price, :quantity] do
+  defp access_cut_value(cut, k) when k in [:price, :quantity] do
     [Access.key(:station), Access.key(:market), Access.key(cut), Access.key(k)]
   end
 

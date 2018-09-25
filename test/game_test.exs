@@ -1,6 +1,6 @@
 defmodule GameTest do
   use ExUnit.Case
-  alias FutureButcherEngine.{Game, GameSupervisor, Rules, Player}
+  alias FutureButcherEngine.{Game, GameSupervisor, Rules, Player, Station}
 
 
   # Game init ------------------------------------------------------------------
@@ -58,13 +58,90 @@ defmodule GameTest do
 
   # Debt/loans -----------------------------------------------------------------
 
+  describe ".buy_loan" do
+    setup _context do
+      {:ok, game} = GameSupervisor.start_game("Frank")
+      Game.start_game(game)
+
+      on_exit fn -> GameSupervisor.stop_game("Frank") end
+
+      %{game: game}
+    end
+
+    test "should increase funds, debt, and set rate", context do
+      Game.buy_loan(context.game, 5000, 0.2)
+      test_data = :sys.get_state context.game
+
+      assert test_data.player.funds === 5000
+      assert test_data.player.debt === 5000
+      assert test_data.player.rate === 0.2
+    end
+
+    test "should return error if buying loan outside downtown", context do
+      state_data = :sys.get_state(context.game)
+      invalid_station = %Station{state_data.station | station_name: :comption}
+      :sys.replace_state(context.game, fn _state -> %{state_data | station: invalid_station} end)
+
+      assert Game.buy_loan(context.game, 5000, 0.2) === :must_be_downtown
+    end
+
+    test "should return error if already in debt", context do
+      base_state = :sys.get_state(context.game)
+      invalid_player = %Player{base_state.player | debt: 4000, rate: 0.2}
+      :sys.replace_state(context.game, fn _state -> %{base_state | player: invalid_player} end)
+
+      assert Game.buy_loan(context.game, 5000, 0.2) === :already_has_debt
+    end
+
+  end
+
+  describe ".pay_loan" do
+    setup _context do
+      {:ok, game} = GameSupervisor.start_game("Frank")
+      Game.start_game(game)
+      Game.buy_loan(game, 5000, 0.2)
+
+      state_data = :sys.get_state(game)
+      test_player = %Player{state_data.player | funds: 10000}
+      :sys.replace_state(game, fn _state -> %{state_data | player: test_player} end)
+
+      on_exit fn -> GameSupervisor.stop_game("Frank") end
+
+      %{game: game}
+    end
+
+    test "should reduce funds and clear debt, rate", context do
+      Game.pay_debt(context.game, :sys.get_state(context.game).player.debt)
+      test_data = :sys.get_state(context.game)
+
+      assert test_data.player.funds === 5000
+      assert test_data.player.debt === 0
+      assert test_data.player.rate === 0.0
+    end
+
+    test "should return error when not downtown", context do
+      base_state = :sys.get_state(context.game)
+      invalid_station = %Station{base_state.station | station_name: :beverly_hills}
+      :sys.replace_state(context.game, fn _state -> %{base_state | station: invalid_station} end)
+
+      assert Game.pay_debt(context.game, base_state.player.debt) === :must_be_downtown
+    end
+
+    test "should return error if funds is less then debt", context do
+      base_state = :sys.get_state(context.game)
+      invalid_player = %Player{base_state.player | funds: 100}
+      :sys.replace_state(context.game, fn _state -> %{base_state | player: invalid_player} end)
+
+      assert Game.pay_debt(context.game, base_state.player.debt) === :insufficient_funds
+    end
+  end
 
   # Buy/sell cuts --------------------------------------------------------------
 
 
   # Travel/transit -------------------------------------------------------------
 
-  describe ".change_station when in game" do
+  describe ".change_station" do
     setup _context do
       {:ok, game}       = GameSupervisor.start_game("Frank")
       Game.start_game(game)
@@ -76,25 +153,42 @@ defmodule GameTest do
       %{base_state: base_state, test_state: test_state, game: game}
     end
 
-    test "changes game state", context do
+    test "should update game state", context do
       random_occurence_outcomes = [:mugging, :in_game]
       assert Enum.member?(random_occurence_outcomes, context.test_state.rules.state)
     end
 
-    test "station is updated", context do
+    test "should update station name", context do
       assert context.test_state.station.station_name == :compton
     end
 
-    test "decrements turn by 1", context do
+    test "should decrement turns left", context do
       assert context.base_state.rules.turns_left - context.test_state.rules.turns_left == 1
     end
 
-    test "with exisitng player debt rate accrues debt", context do
+    test "should accrue player debt", context do
       assert context.test_state.player.rate === 0.2
       assert context.test_state.player.debt === 6000
     end
 
-    test "with 0 turns left ends game", context do
+    test "should not charge entry fee in compton", context do
+      assert context.base_state.player.funds === context.test_state.player.funds
+    end
+
+    test "should charge entry fee in other stations", context do
+      {:ok, travel_state} = Game.change_station(context.game, :hollywood)
+      assert context.base_state.player.funds > travel_state.player.funds
+    end
+
+    test "should return error when entry fee is too expensive", context do
+      base_state = :sys.get_state(context.game)
+      invalid_player = %Player{base_state.player | funds: 5}
+      :sys.replace_state(context.game, fn _state -> %{base_state | player: invalid_player} end)
+
+      assert Game.change_station(context.game, :beverly_hills) === :insufficient_funds
+    end
+
+    test "should return end game with no turns left", context do
       test_rules = %Rules{context.test_state.rules | turns_left: 0}
       :sys.replace_state context.game, fn _state -> %{context.test_state | rules: test_rules} end
 
@@ -104,6 +198,9 @@ defmodule GameTest do
       assert end_state.rules.state === :game_over
     end
   end
+
+
+  # Muggings -------------------------------------------------------------------
 
   describe ".fight_mugger" do
     setup _context do

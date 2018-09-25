@@ -1,7 +1,7 @@
 defmodule FutureButcherEngine.Weapon do
 
   @weapons %{
-    :hedge_clippers => %{:damage => 4, :weight => 3, :cuts => [:ribs, :flank, :liver]},
+    :hedge_clippers => %{:damage => 5, :weight => 3, :cuts => [:ribs, :flank, :liver]},
     :hockey_stick   => %{:damage => 8, :weight => 5, :cuts => []},
     :brass_knuckles => %{:damage => 4, :weight => 1, :cuts => []},
     :box_cutter     => %{:damage => 3, :weight => 1, :cuts => [:loin, :heart, :liver, :flank]},
@@ -18,7 +18,7 @@ defmodule FutureButcherEngine.Weapon do
     |> Kernel.*(get_damage(weapon))
     |> Kernel./(get_weight(weapon) / 2)
     |> Kernel./(turns_left)
-    |> Kernel.*(5000)
+    |> Kernel.*(8000)
     |> round()
   end
 
