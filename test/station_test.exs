@@ -44,20 +44,4 @@ defmodule FutureButcherEngine.StationTest do
     end
   end
 
-  test "Market generated at low crime station in early game is reduced in range" do
-    station = Station.new(:beverly_hills, 25)
-    range   = 0.6
-
-    expected_flank_max = 20 - (20 * ((1 - range) / 2)) |> round()
-    expected_flank_min = 20 * ((1 - range) / 2) + 1 |> round()
-    expected_heart_max = 10 - (10 * ((1 - range) / 2)) |> round()
-    expected_heart_min = 10 * ((1 - range) / 2) + 1 |> round()
-    expected_ribs_max  = 40 - (40 * ((1 - range) / 2)) |> round()
-    expected_ribs_min  = 40 * ((1 - range) / 2) + 1 |> round()
-
-    assert Enum.member? (expected_flank_min..expected_flank_max), station.market.flank.quantity
-    assert Enum.member? (expected_heart_min..expected_heart_max), station.market.heart.quantity
-    assert Enum.member? (expected_ribs_min..expected_ribs_max), station.market.ribs.quantity
-  end
-
 end

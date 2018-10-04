@@ -176,7 +176,7 @@ defmodule GameTest do
     end
 
     test "should charge entry fee in other stations", context do
-      {:ok, travel_state} = Game.change_station(context.game, :hollywood)
+      {:ok, travel_state} = Game.change_station(context.game, :beverly_hills)
       assert context.base_state.player.funds > travel_state.player.funds
     end
 
