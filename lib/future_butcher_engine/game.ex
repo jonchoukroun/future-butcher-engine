@@ -250,7 +250,7 @@ defmodule FutureButcherEngine.Game do
   def handle_call({:pay_mugger, _response}, _from, _state_data), do: {:error, :invalid_response}
 
 
-  # Items ----------------------------------------------------------------------
+  # Packs ----------------------------------------------------------------------
 
   def handle_call({:buy_pack, pack}, _from, state_data) do
     with            {:ok, rules} <- Rules.check(state_data.rules, :buy_pack),
