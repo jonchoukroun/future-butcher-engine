@@ -88,13 +88,13 @@ defmodule FutureButcherEngine.Station do
     end
   end
 
-  def calculate_mugging_probability(20, _turns_left, :compton), do: 0.55
-  def calculate_mugging_probability(_pack_space, _turns_left, :compton), do: 0.7
+  def calculate_mugging_probability(20, _turns_left, :compton), do: 0.45
+  def calculate_mugging_probability(_pack_space, _turns_left, :compton), do: 0.65
 
   def calculate_mugging_probability(pack_space, turns_left, station) do
     base_crime_rate = get_base_crime_rate(station)
     current_turn    = 25 - turns_left
-    visibility      = if pack_space === 20, do: 0.0, else: 0.1
+    visibility      = if pack_space === 20, do: 0.0, else: 0.2
 
     :math.sin((current_turn + base_crime_rate) / 35)
     |> :math.pow(6 - base_crime_rate)
