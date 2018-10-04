@@ -11,7 +11,7 @@ defmodule FutureButcherEngine.Station do
     },
     :downtown => %{
       :base_crime_rate => 2,
-      :cuts_list => [:flank, :ribs]
+      :cuts_list => [:heart, :flank, :ribs]
     },
     :venice_beach => %{
       :base_crime_rate => 3,
@@ -19,7 +19,7 @@ defmodule FutureButcherEngine.Station do
     },
     :hollywood => %{
       :base_crime_rate => 4,
-      :cuts_list => [:ribs, :loin, :liver]
+      :cuts_list => [:loin, :liver]
     },
     :compton => %{
       :base_crime_rate => 5,
@@ -71,7 +71,6 @@ defmodule FutureButcherEngine.Station do
     crime_rate   = get_base_crime_rate(station)
     current_turn = 25 - turns_left
     fee = 2 * (5 - crime_rate) * :math.pow(current_turn, 2) - (100 * crime_rate) + 500 |> round()
-    IO.inspect(fee, label: "fee")
     {:ok, fee}
   end
 
@@ -81,19 +80,26 @@ defmodule FutureButcherEngine.Station do
   def random_encounter(_space, turns_left, _station) when turns_left === 0, do: {:ok, :end_transit}
 
   def random_encounter(pack_space, turns_left, station) do
-    base_crime_rate       = get_base_crime_rate(station)
-    current_turn          = 25 - turns_left
-    visibility_adjustment = (pack_space - 20) / (250 * (6 - base_crime_rate))
-
-    p = :math.sin((current_turn + base_crime_rate) / 25)
-        |> :math.pow(8 - base_crime_rate)
-        |> Kernel.+(visibility_adjustment)
-        |> Float.round(3)
+    p = calculate_mugging_probability(pack_space, turns_left, station)
 
     case :rand.uniform > p do
       true  -> {:ok, :end_transit}
       false -> {:ok, :mugging}
     end
+  end
+
+  def calculate_mugging_probability(20, _turns_left, :compton), do: 0.55
+  def calculate_mugging_probability(_pack_space, _turns_left, :compton), do: 0.7
+
+  def calculate_mugging_probability(pack_space, turns_left, station) do
+    base_crime_rate = get_base_crime_rate(station)
+    current_turn    = 25 - turns_left
+    visibility      = if pack_space === 20, do: 0.0, else: 0.1
+
+    :math.sin((current_turn + base_crime_rate) / 35)
+    |> :math.pow(6 - base_crime_rate)
+    |> Kernel.+(visibility)
+    |> Float.round(3)
   end
 
 
@@ -141,12 +147,8 @@ defmodule FutureButcherEngine.Station do
   end
 
   defp generate_cut(cut, station, turns_left) do
-    quantity = generate_quantity(cut, station, turns_left)
+    quantity = Enum.random(0..Cut.maximum_quantity(cut))
     %{quantity: quantity, price: get_price(quantity, cut)}
-  end
-
-  defp generate_quantity(cut, station, turns_left) do
-    Enum.random(0..Cut.maximum_quantity(cut))
   end
 
   defp get_price(quantity, cut) when quantity > 0 do
