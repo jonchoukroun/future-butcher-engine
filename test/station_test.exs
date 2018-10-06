@@ -2,7 +2,13 @@ defmodule FutureButcherEngine.StationTest do
   use ExUnit.Case
   alias FutureButcherEngine.Station
 
-  describe ".new - bell gardens" do
+  describe ".new - bell gardens with more than 20 turns left" do
+    test "should return error" do
+      assert Station.new(:bell_gardens, 24) === {:error, :store_not_open}
+    end
+  end
+
+  describe ".new - bell gardens with 20 or fewer turns left" do
     setup _context do
       %{station: Station.new(:bell_gardens, 20)}
     end
