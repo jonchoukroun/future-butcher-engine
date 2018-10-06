@@ -137,7 +137,7 @@ defmodule FutureButcherEngine.PlayerTest do
       %{player: Player.new("Frank")}
     end
 
-    test "with sufficient funds and pack space adds weapon and decreases funds", context do
+    test "with sufficient funds adds weapon and decreases funds", context do
       {:ok, test_player } = Player.buy_weapon(context.player, :machete, 1000)
       assert test_player.funds  == 4000
       assert test_player.weapon == :machete

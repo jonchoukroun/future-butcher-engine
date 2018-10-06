@@ -95,13 +95,8 @@ defmodule FutureButcherEngine.Player do
   end
 
   def buy_weapon(player, weapon, cost) when weapon in @weapon_type do
-    weapon_weight = Weapon.get_weight(weapon)
-    with {:ok} <- sufficient_space?(player, weapon_weight) do
-      {:ok, player} = adjust_funds(player, :decrease, cost)
-      {:ok, player |> Map.put(:weapon, weapon)}
-    else
-      {:error, msg} -> {:error, msg}
-    end
+    {:ok, player} = adjust_funds(player, :decrease, cost)
+    {:ok, player |> Map.put(:weapon, weapon)}
   end
 
   def buy_weapon(_player, _weapon, _cost), do: {:error, :invalid_weapon_type}
@@ -117,14 +112,9 @@ defmodule FutureButcherEngine.Player do
   when current_weapon == weapon, do: {:error, :same_weapon_type}
 
   def replace_weapon(player, weapon, cost, value) do
-    net_weapon_weight = Weapon.get_weight(weapon) - Weapon.get_weight(player.weapon)
-    with {:ok} <- sufficient_space?(player, net_weapon_weight) do
-      {:ok, player} = adjust_funds(player, :increase, value)
-      {:ok, player} = adjust_funds(player, :decrease, cost)
-      {:ok, player |> Map.replace!(:weapon, weapon)}
-    else
-      {:error, msg} -> {:error, msg}
-    end
+    {:ok, player} = adjust_funds(player, :increase, value)
+    {:ok, player} = adjust_funds(player, :decrease, cost)
+    {:ok, player |> Map.replace!(:weapon, weapon)}
   end
 
   def drop_weapon(%Player{weapon: nil}), do: {:error, :no_weapon_owned}
@@ -191,12 +181,9 @@ defmodule FutureButcherEngine.Player do
   end
 
   defp get_weight_carried(player) do
-    weapon_weight = if player.weapon, do: Weapon.get_weight(player.weapon), else: 0
-
     player.pack
     |> Map.values()
     |> Enum.reduce(0, fn cut, acc -> cut + acc end)
-    |> Kernel.+(weapon_weight)
   end
 
   defp sufficient_space?(player, amount) do
