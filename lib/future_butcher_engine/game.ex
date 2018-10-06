@@ -41,14 +41,10 @@ defmodule FutureButcherEngine.Game do
   end
 
 
-  # Debt/loans -----------------------------------------------------------------
+  # Debt -----------------------------------------------------------------------
 
-  def buy_loan(game, debt, rate) do
-    GenServer.call(game, {:buy_loan, debt, rate})
-  end
-
-  def pay_debt(game, amount) when amount > 0 do
-    GenServer.call(game, {:pay_debt, amount})
+  def pay_debt(game) do
+    GenServer.call(game, {:pay_debt})
   end
 
 
@@ -133,24 +129,9 @@ defmodule FutureButcherEngine.Game do
 
   # Debt/loans -----------------------------------------------------------------
 
-  def handle_call({:buy_loan, debt, rate}, _from, state_data) do
-    with      {:ok} <- Station.validate_station(state_data.station.station_name, :loans),
-       {:ok, rules} <- Rules.check(state_data.rules, :buy_loan),
-      {:ok, player} <- Player.buy_loan(state_data.player, debt, rate)
-    do
-      state_data
-      |> update_rules(rules)
-      |> update_player(player)
-      |> reply_success(:ok)
-    else
-      {:error, msg} -> reply_failure(state_data, msg)
-    end
-  end
-
-  def handle_call({:pay_debt, amount}, _from, state_data) do
-    with      {:ok} <- Station.validate_station(state_data.station.station_name, :loans),
-       {:ok, rules} <- Rules.check(state_data.rules, :pay_debt),
-      {:ok, player} <- Player.pay_debt(state_data.player, amount)
+  def handle_call({:pay_debt}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :pay_debt),
+        {:ok, player} <- Player.pay_debt(state_data.player)
     do
       state_data
       |> update_rules(rules)
