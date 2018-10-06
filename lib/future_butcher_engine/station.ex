@@ -57,12 +57,6 @@ defmodule FutureButcherEngine.Station do
   def new(_station, _turns_left), do: {:error, :invalid_station}
 
 
-  # Banking --------------------------------------------------------------------
-
-  def validate_station(:downtown, :loans), do: {:ok}
-  def validate_station(_station, :loans), do: {:error, :must_be_downtown}
-
-
   # Entry fee ------------------------------------------------------------------
 
   def generate_entry_fee(:compton, _turns_left), do: {:ok, 0}
