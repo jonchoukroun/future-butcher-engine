@@ -1,12 +1,13 @@
 defmodule FutureButcherEngine.Player do
   alias FutureButcherEngine.{Player, Weapon}
 
-  @enforce_keys [:player_name, :funds, :debt, :rate, :pack, :pack_space, :weapon]
-  defstruct     [:player_name, :funds, :debt, :rate, :pack, :pack_space, :weapon]
+  @enforce_keys [:player_name, :funds, :debt, :pack, :pack_space, :weapon]
+  defstruct     [:player_name, :funds, :debt, :pack, :pack_space, :weapon]
 
-  @base_space  20
-  @cut_keys    [:flank, :heart, :loin, :liver, :ribs]
-  @weapon_type [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
+  @base_space   20
+  @starter_loan 5000
+  @cut_keys     [:flank, :heart, :loin, :liver, :ribs]
+  @weapon_type  [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
 
 
   # New player ----------------------------------------------------------------
@@ -14,10 +15,11 @@ defmodule FutureButcherEngine.Player do
   def new(player_name) when is_binary(player_name) do
     %Player{
       player_name: player_name,
-      funds: 0, debt: 0, rate: 0.0,
-      pack: initialize_pack(),
-      pack_space: @base_space,
-      weapon: nil
+      funds:       @starter_loan,
+      debt:        @starter_loan,
+      pack:        initialize_pack(),
+      pack_space:  @base_space,
+      weapon:      nil
     }
   end
 
@@ -40,7 +42,7 @@ defmodule FutureButcherEngine.Player do
   def buy_pack(%Player{funds: funds}, _, cost) when funds < cost, do: {:error, :insufficient_funds}
 
   def buy_pack(%Player{pack_space: current_space}, new_space, _cost)
-  when current_space >= new_space, do: {:error, :no_pack_upgrade}
+  when current_space >= new_space, do: {:error, :must_upgrade_pack}
 
   def buy_pack(player, pack_space, cost) do
     adjust_funds(Map.put(player, :pack_space, pack_space), :decrease, cost)
@@ -49,48 +51,19 @@ defmodule FutureButcherEngine.Player do
 
   # Debt/Loans -----------------------------------------------------------------
 
-  def buy_loan(%Player{debt: debt, rate: rate}, _debt, _rate) when debt > 0 and rate > 0 do
-    {:error, :already_has_debt}
-  end
-
-  def buy_loan(player, debt, rate) when is_integer(rate) do
-    buy_loan(player, debt, rate * 1.0)
-  end
-
-  def buy_loan(player, debt, rate) when is_integer(debt) and is_float(rate) do
-    player = increase_attribute(player, :debt, debt)
-    player = increase_attribute(player, :rate, rate)
-
-    adjust_funds(player, :increase, debt)
-  end
-
-  def buy_loan(_player, _debt, _rate) do
-    {:error, :invalid_loan_values}
-  end
-
-  def accrue_debt(%Player{debt: debt, rate: rate} = player) when debt > 0 do
-    new_debt =
-      debt |> Kernel.*(1000) |> Kernel.*(rate) |> Kernel./(1000) |> Kernel.round
-    {:ok, player |> increase_attribute(:debt, new_debt)}
+  def accrue_debt(%Player{debt: debt} = player) when debt > 0 do
+    accrued_debt = debt * 0.15 |> round()
+    {:ok, player |> increase_attribute(:debt, accrued_debt)}
   end
 
   def accrue_debt(player), do: {:ok, player}
 
-  def pay_debt(%Player{funds: funds, debt: debt} = player, amount)
-  when funds > amount and amount >= debt do
-    {:ok, player} = adjust_funds(player, :decrease, debt)
-    {:ok, player
-          |> decrease_attribute(:debt, debt)
-          |> decrease_attribute(:rate, player.rate)}
-  end
+  def pay_debt(%Player{funds: f, debt: d}) when d > f, do: {:error, :insufficient_funds}
 
-  def pay_debt(%Player{funds: funds, debt: debt} = player, amount) when funds > amount do
-    payoff = Enum.min [debt, amount]
-    {:ok, player} = adjust_funds(player, :decrease, payoff)
-    {:ok, player |> decrease_attribute(:debt, payoff)}
+  def pay_debt(player) do
+    {:ok, paid_player} = adjust_funds(player, :decrease, player.debt)
+    {:ok, %Player{paid_player | debt: 0}}
   end
-
-  def pay_debt(_player, _amount), do: {:error, :insufficient_funds}
 
 
   # Buy/Sell Cuts --------------------------------------------------------------
