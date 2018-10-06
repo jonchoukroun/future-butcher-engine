@@ -120,32 +120,15 @@ defmodule GameTest do
       assert context.test_state.player.debt === 5750
     end
 
-    test "should not charge entry fee in compton", context do
-      assert context.base_state.player.funds === context.test_state.player.funds
-    end
-
-    test "should charge entry fee in other stations", context do
-      {:ok, travel_state} = Game.change_station(context.game, :beverly_hills)
-      assert context.base_state.player.funds > travel_state.player.funds
-    end
-
-    test "should return error when entry fee is too expensive", context do
-      base_state = :sys.get_state(context.game)
-      invalid_player = %Player{base_state.player | funds: 5}
-      :sys.replace_state(context.game, fn _state -> %{base_state | player: invalid_player} end)
-
-      assert Game.change_station(context.game, :beverly_hills) === :insufficient_funds
-    end
-
-    test "should return end game with no turns left", context do
-      test_rules = %Rules{context.test_state.rules | turns_left: 0}
-      :sys.replace_state context.game, fn _state -> %{context.test_state | rules: test_rules} end
-
-      {end_response, end_state} = Game.change_station(context.game, :hollywood)
-
-      assert end_response          === :game_over
-      assert end_state.rules.state === :game_over
-    end
+    # test "should return end game with no turns left", context do
+    #   test_rules = %Rules{context.test_state.rules | turns_left: 0}
+    #   :sys.replace_state context.game, fn _state -> %{context.test_state | rules: test_rules} end
+    #
+    #   {end_response, end_state} = Game.change_station(context.game, :hollywood)
+    #
+    #   assert end_response          === :game_over
+    #   assert end_state.rules.state === :game_over
+    # end
   end
 
 
