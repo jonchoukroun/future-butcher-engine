@@ -30,13 +30,6 @@ defmodule FutureButcherEngine.Player do
   end
 
 
-  # Traveling ------------------------------------------------------------------
-
-  def charge_fee(%Player{funds: funds}, fee) when fee > funds, do: {:error, :insufficient_funds}
-
-  def charge_fee(player, fee), do: adjust_funds(player, :decrease, fee)
-
-
   # Packs ----------------------------------------------------------------------
 
   def buy_pack(%Player{funds: funds}, _, cost) when funds < cost, do: {:error, :insufficient_funds}
