@@ -41,9 +41,10 @@ defmodule FutureButcherEngine.Station do
   end
   def get_base_crime_rate(_station), do: {:error, :invalid_station}
 
-  def new(station, turns_left) when station == :bell_gardens do
+  def new(:bell_gardens, turns_left) when turns_left > 20, do: {:error, :store_not_open}
+  def new(:bell_gardens, turns_left) do
     %Station{
-      station_name: station,
+      station_name: :bell_gardens,
       store:        generate_store(turns_left),
       market:       nil
     }
@@ -93,8 +94,7 @@ defmodule FutureButcherEngine.Station do
   def generate_store(turns_left) when turns_left > 20, do: %{}
 
   def generate_store(turns_left) do
-    generate_weapons_stock(turns_left)
-    |> Enum.concat(generate_packs_stock(turns_left))
+    Enum.concat(generate_weapons_stock(turns_left), generate_packs_stock(turns_left))
     |> Map.new()
   end
 
@@ -102,7 +102,8 @@ defmodule FutureButcherEngine.Station do
     Weapon.weapon_types
     |> Enum.map(fn weapon -> {weapon, %{
         price:  Weapon.generate_price(weapon, turns_left),
-        weight: Weapon.get_weight(weapon)
+        damage: Weapon.get_damage(weapon),
+        cuts:   Weapon.get_cuts(weapon)
         }} end)
   end
 
