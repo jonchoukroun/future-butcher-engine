@@ -63,9 +63,9 @@ defmodule FutureButcherEngine.Station do
 
   # Mugging --------------------------------------------------------------------
 
-  def random_encounter(_space, _turns_left, :bell_gardens), do: {:ok, :end_transit}
+  def random_encounter(_pack_space, _turns_left, :bell_gardens), do: {:ok, :end_transit}
 
-  def random_encounter(_space, 0, _station), do: {:ok, :end_transit}
+  def random_encounter(_pack_space, 0, _station), do: {:ok, :end_transit}
 
   def random_encounter(pack_space, turns_left, station) do
     p = calculate_mugging_probability(pack_space, turns_left, station)
