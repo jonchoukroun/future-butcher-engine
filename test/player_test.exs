@@ -204,6 +204,18 @@ defmodule FutureButcherEngine.PlayerTest do
       {:ok, _player, test_outcome} = Player.fight_mugger(context.player)
       assert Enum.member?(fight_outcomes, test_outcome)
     end
+
+    test "victory may increase cuts owned", context do
+      base_cuts_owned = Map.values(context.player.pack) |> Enum.reduce(0, fn(sum, n) -> sum + n end)
+
+      case Player.fight_mugger(context.player) do
+        {:ok, test_player, :victory} ->
+          cuts_owned = Map.values(test_player.pack) |> Enum.reduce(0, fn(sum, n) -> sum + n end)
+          assert cuts_owned >= base_cuts_owned
+
+        {:ok, _player, :defeat} -> :ok
+      end
+    end
   end
 
 
