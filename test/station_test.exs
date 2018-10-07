@@ -8,10 +8,8 @@ defmodule FutureButcherEngine.StationTest do
     end
   end
 
-  describe ".new - bell gardens with 20 or fewer turns left" do
-    setup _context do
-      %{station: Station.new(:bell_gardens, 20)}
-    end
+  describe ".new - bell gardens" do
+    setup [:get_bell_gardens]
 
     test "should generate store", context do
       assert is_map(context.station.store)
@@ -22,23 +20,35 @@ defmodule FutureButcherEngine.StationTest do
     end
   end
 
-  describe ".new - other stations" do
-    setup _context do
-      %{station: Station.new(:compton, 24)}
+  describe ".new" do
+    setup [:get_compton]
+
+    test "should update station name", context do
+      assert context.station.station_name === :compton
     end
 
-    test "generates market quantities and values", context do
-      assert context.station.station_name === :compton
+    test "should generate market", context do
       assert is_map(context.station.market)
     end
 
-    test "does not generate a store", context do
+    test "should not generate store", context do
       assert context.station.store == nil
     end
   end
 
   test ".new - invalid station name" do
     assert Station.new(:bullshit_name, 25) == {:error, :invalid_station}
+  end
+
+
+  # Named setups ===============================================================
+
+  def get_compton(_context) do
+    %{station: Station.new(:compton, 24)}
+  end
+
+  def get_bell_gardens(_context) do
+    %{station: Station.new(:bell_gardens, 20)}
   end
 
 end
