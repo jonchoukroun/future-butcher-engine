@@ -206,11 +206,11 @@ defmodule FutureButcherEngine.PlayerTest do
     end
 
     test "victory may increase cuts owned", context do
-      base_cuts_owned = Map.values(context.player.pack) |> Enum.reduce(0, fn(sum, n) -> sum + n end)
+      base_cuts_owned = get_pack_sum(context.player.pack)
 
       case Player.fight_mugger(context.player) do
         {:ok, test_player, :victory} ->
-          cuts_owned = Map.values(test_player.pack) |> Enum.reduce(0, fn(sum, n) -> sum + n end)
+          cuts_owned = get_pack_sum(test_player.pack)
           assert cuts_owned >= base_cuts_owned
 
         {:ok, _player, :defeat} -> :ok
@@ -231,60 +231,36 @@ defmodule FutureButcherEngine.PlayerTest do
     end
   end
 
+  describe ".bribe_mugger with insufficient funds and single cut type owned" do
+    setup [:initialize_player, :buy_cut, :zero_funds]
 
-  # describe ".pay_mugger :cuts" do
-  #   setup _context do
-  #     %{player: Player.new("Frank")}
-  #   end
-  #
-  #   test "with no cuts returns error", context do
-  #     assert Player.pay_mugger(context.player, :cuts) == {:error, :no_cuts_owned}
-  #   end
-  #
-  #   test "with 1 cut type removes all cuts", context do
-  #     {:ok, test_player} = Player.buy_cut(context.player, :heart, 3, 0)
-  #     {:ok, test_player} = Player.pay_mugger(test_player, :cuts)
-  #     assert test_player.pack.heart == 0
-  #   end
-  #
-  #   test "with multiple cut types owned removes all of 1 cut type", context do
-  #     {:ok, player} = Player.buy_cut(context.player, :heart, 3, 0)
-  #     {:ok, player} = Player.buy_cut(player, :loin, 2, 0)
-  #     {:ok, player} = Player.buy_cut(player, :ribs, 1, 0)
-  #
-  #     {:ok, test_player} = Player.pay_mugger(player, :cuts)
-  #     assert Map.keys(test_player.pack)
-  #             |> Enum.filter(fn cut -> test_player.pack[cut] > 0 end)
-  #             |> Enum.count == 2
-  #   end
-  # end
-  #
-  # describe ".pay_mugger :funds" do
-  #   setup _context do
-  #     %{player: Player.new("Frank")}
-  #   end
-  #
-  #   test "with no funds returns error", context do
-  #     test_player = %Player{context.player | funds: 0}
-  #     assert Player.pay_mugger(test_player, :funds) == {:error, :insufficient_funds}
-  #   end
-  #
-  #   test "with funds decreases player's funds", context do
-  #     {:ok, test_player} = Player.pay_mugger(context.player, :funds)
-  #     assert context.player.funds > test_player.funds
-  #   end
-  #
-  #   test "does not decrease cuts", context do
-  #     {:ok, test_player} = Player.pay_mugger(context.player, :funds)
-  #     assert test_player.pack === context.player.pack
-  #   end
-  # end
-  #
-  # describe ".pay_mugger :fish" do
-  #   test "with invalid payoff type" do
-  #     assert Player.pay_mugger(Player.new("Frank"), :fish) == {:error, :invalid_mugging_response}
-  #   end
-  # end
+    test "should zero out owned cuts", context do
+      {:ok, test_player} = Player.bribe_mugger(context.player)
+      assert get_pack_sum(test_player.pack) === 0
+    end
+  end
+
+  describe ".bribe_mugger with insufficient funds and 2 cut types owned" do
+    setup [:initialize_player, :buy_cut, :add_other_cuts, :zero_funds]
+
+    test "should zero out only 1 cut type", context do
+      base_cuts_owned = get_pack_sum(context.player.pack)
+
+      {:ok, test_player} = Player.bribe_mugger(context.player)
+      test_cuts_owned = get_pack_sum(test_player.pack)
+
+      assert test_cuts_owned !== 0
+      assert test_cuts_owned < base_cuts_owned
+    end
+  end
+
+  describe ".bribe_mugger with insufficient funds and no cuts" do
+    setup [:initialize_player, :zero_funds]
+
+    test "should return error", context do
+      assert Player.bribe_mugger(context.player) === {:error, :cannot_bribe_mugger}
+    end
+  end
 
 
   # Funds ----------------------------------------------------------------------
@@ -328,9 +304,21 @@ defmodule FutureButcherEngine.PlayerTest do
     %{player: player}
   end
 
+  defp add_other_cuts(context) do
+    {:ok, player} = Player.buy_cut(context.player, :heart, 5, 0)
+    %{player: player}
+  end
+
   defp buy_weapon(context) do
     {:ok, player} = Player.buy_weapon(context.player, :box_cutter, 0)
     %{player: player}
+  end
+
+
+  # Utilities ==================================================================
+
+  defp get_pack_sum(pack) do
+    Map.values(pack) |> Enum.reduce(0, fn(sum, n) -> sum + n end)
   end
 
 end
