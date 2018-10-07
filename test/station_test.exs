@@ -86,6 +86,7 @@ defmodule FutureButcherEngine.StationTest do
       assert is_float(Station.calculate_mugging_probability(30, 24, :hollywood))
     end
   end
+  
 
   # Named setups ===============================================================
 
