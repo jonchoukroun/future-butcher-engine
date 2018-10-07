@@ -30,7 +30,7 @@ defmodule FutureButcherEngine.Station do
     }
   }
 
-  @station_names [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
+  @station_names [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton, :bell_gardens]
 
   def station_names, do: @station_names
 
@@ -63,7 +63,9 @@ defmodule FutureButcherEngine.Station do
 
   # Mugging --------------------------------------------------------------------
 
-  def random_encounter(_space, turns_left, _station) when turns_left === 0, do: {:ok, :end_transit}
+  def random_encounter(_space, _turns_left, :bell_gardens), do: {:ok, :end_transit}
+
+  def random_encounter(_space, 0, _station), do: {:ok, :end_transit}
 
   def random_encounter(pack_space, turns_left, station) do
     p = calculate_mugging_probability(pack_space, turns_left, station)

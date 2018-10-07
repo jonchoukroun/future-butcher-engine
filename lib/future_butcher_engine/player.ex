@@ -1,4 +1,8 @@
 defmodule FutureButcherEngine.Player do
+  @moduledoc """
+  Player module handles buying/selling cuts, weapons; debt; muggings
+  """
+
   alias FutureButcherEngine.{Player, Weapon}
 
   @enforce_keys [:player_name, :funds, :debt, :pack, :pack_space, :weapon]
@@ -12,6 +16,9 @@ defmodule FutureButcherEngine.Player do
 
   # New player ----------------------------------------------------------------
 
+  @doc """
+  .new/1: player name
+  """
   def new(player_name) when is_binary(player_name) do
     %Player{
       player_name: player_name,
@@ -32,6 +39,9 @@ defmodule FutureButcherEngine.Player do
 
   # Packs ----------------------------------------------------------------------
 
+  @doc """
+  .buy_pack/3: player, space of new pack, cost of new pack
+  """
   def buy_pack(%Player{funds: funds}, _, cost) when funds < cost, do: {:error, :insufficient_funds}
 
   def buy_pack(%Player{pack_space: current_space}, new_space, _cost)
@@ -44,6 +54,9 @@ defmodule FutureButcherEngine.Player do
 
   # Debt/Loans -----------------------------------------------------------------
 
+  @doc """
+  .accrue_debt/1: player
+  """
   def accrue_debt(%Player{debt: debt} = player) when debt > 0 do
     accrued_debt = debt * 0.15 |> round()
     {:ok, player |> increase_attribute(:debt, accrued_debt)}
@@ -51,6 +64,9 @@ defmodule FutureButcherEngine.Player do
 
   def accrue_debt(player), do: {:ok, player}
 
+  @doc """
+  .pay_debt/1: player
+  """
   def pay_debt(%Player{funds: f, debt: d}) when d > f, do: {:error, :insufficient_funds}
 
   def pay_debt(player) do
@@ -61,6 +77,9 @@ defmodule FutureButcherEngine.Player do
 
   # Buy/Sell Cuts --------------------------------------------------------------
 
+  @doc """
+  .buy_cut/4: player, cut name, cut amount, cut cost
+  """
   def buy_cut(%Player{funds: funds}, _cut, _amount, cost) when funds < cost do
     {:error, :insufficient_funds}
   end
@@ -86,6 +105,9 @@ defmodule FutureButcherEngine.Player do
 
   # Weapons --------------------------------------------------------------------
 
+  @doc """
+  .buy_weapon/3: player, weapon name, weapon cost
+  """
   def buy_weapon(%Player{weapon: weapon}, _weapon, _cost) when not is_nil(weapon) do
     {:error, :already_owns_weapon}
   end
@@ -101,6 +123,10 @@ defmodule FutureButcherEngine.Player do
 
   def buy_weapon(_player, _weapon, _cost), do: {:error, :invalid_weapon_type}
 
+
+  @doc """
+  .replace_weapon/4: player, new weapon name, new weapon cost, current weapon value
+  """
   def replace_weapon(%Player{weapon: weapon}, _weapon, _cost, _value) when is_nil(weapon) do
     {:error, :no_weapon_owned}
   end
@@ -136,21 +162,17 @@ defmodule FutureButcherEngine.Player do
     end
   end
 
-  def pay_mugger(%Player{pack: pack} = player, :cuts) do
+  def bribe_mugger(%Player{funds: funds} = player) when funds >= 500 do
+    loss = Enum.random(20..60) |> Kernel./(100) |> (fn n -> round(funds * n) end).()
+    adjust_funds(player, :decrease, loss)
+  end
+
+  def bribe_mugger(%Player{pack: pack} = player) do
     case get_random_cut(pack) do
       {:ok, cut, amount} -> {:ok, player |> Map.put(:pack, decrease_cut(pack, cut, amount))}
-                  :error -> {:error, :no_cuts_owned}
+                  :error -> {:error, :cannot_bribe_mugger}
     end
   end
-
-  def pay_mugger(%Player{funds: funds}, :funds) when funds == 0, do: {:error, :insufficient_funds}
-
-  def pay_mugger(%Player{funds: funds} = player, :funds) do
-    funds_penalty = Enum.random(12..21) |> Kernel./(100) |> (fn n -> round(funds * n) end).()
-    {:ok, player |> decrease_attribute(:funds, funds_penalty)}
-  end
-
-  def pay_mugger(_player, _response), do: {:error, :invalid_mugging_response}
 
 
   # Funds ----------------------------------------------------------------------

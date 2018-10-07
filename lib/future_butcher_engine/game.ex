@@ -5,7 +5,7 @@ defmodule FutureButcherEngine.Game do
   @enforce_keys [:player, :rules]
   defstruct [:player, :rules]
 
-  @stations [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
+  @stations [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton, :bell_gardens]
 
   @mugging_responses [:funds, :cuts]
 
@@ -69,8 +69,8 @@ defmodule FutureButcherEngine.Game do
     GenServer.call(game, {:fight_mugger})
   end
 
-  def pay_mugger(game, response) do
-    GenServer.call(game, {:pay_mugger, response})
+  def bribe_mugger(game) do
+    GenServer.call(game, {:bribe_mugger})
   end
 
 
@@ -181,7 +181,8 @@ defmodule FutureButcherEngine.Game do
   # Travel/transit -------------------------------------------------------------
 
   def handle_call({:change_station, destination}, _from, state_data) do
-    with       {:ok} <- valid_destination?(state_data.station.station_name, destination),
+    with       {:ok} <- valid_destination?(
+                        state_data.station.station_name, state_data.rules.turns_left, destination),
       {:ok, outcome} <- Station.random_encounter(
                           state_data.player.pack_space, state_data.rules.turns_left, destination),
         {:ok, rules} <- Rules.check(state_data.rules, outcome),
@@ -200,9 +201,9 @@ defmodule FutureButcherEngine.Game do
   end
 
   def handle_call({:fight_mugger}, _from, state_data) do
-    with           {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
-         {:ok, player, outcome} <- Player.fight_mugger(state_data.player),
-           {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left, outcome)
+    with        {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
+      {:ok, player, outcome} <- Player.fight_mugger(state_data.player),
+        {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left, outcome)
     do
       state_data
       |> update_player(player)
@@ -213,9 +214,9 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def handle_call({:pay_mugger, response}, _from, state_data) when response in @mugging_responses do
-    with {:ok, rules}  <- Rules.check(state_data.rules, :pay_mugger),
-         {:ok, player} <- Player.pay_mugger(state_data.player, response)
+  def handle_call({:bribe_mugger}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :bribe_mugger),
+        {:ok, player} <- Player.bribe_mugger(state_data.player)
     do
       state_data
       |> update_player(player)
@@ -226,7 +227,7 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  def handle_call({:pay_mugger, _response}, _from, _state_data), do: {:error, :invalid_response}
+  def handle_call({:bribe_mugger, _response}, _from, _state_data), do: {:error, :invalid_response}
 
 
   # Packs ----------------------------------------------------------------------
@@ -299,12 +300,16 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
-  defp valid_destination?(current_station, destination)
+  defp valid_destination?(current_station, _turns_left, destination)
   when destination === current_station, do: {:error, :already_at_station}
 
-  defp valid_destination?(_current_station, destination) when destination in @stations, do: {:ok}
+  defp valid_destination?(_current_station, turns_left, :bell_gardens)
+  when turns_left > 20, do: {:error, :station_not_open}
 
-  defp valid_destination?(_station_name, _destination), do: {:error, :invalid_station}
+  defp valid_destination?(_current_station, _turns, destination)
+  when destination in @stations, do: {:ok}
+
+  defp valid_destination?(_station_name, _turns_left, _destination), do: {:error, :invalid_station}
 
   defp cuts_owned?(pack, cut, amount) do
     if Map.get(pack, cut) >= amount do
