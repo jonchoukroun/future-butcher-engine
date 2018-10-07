@@ -218,6 +218,19 @@ defmodule FutureButcherEngine.PlayerTest do
     end
   end
 
+  describe ".bribe_mugger with sufficient funds" do
+    setup [:initialize_player]
+
+    test "should reduce funds by at least 20 but no more than 60%", context do
+      {:ok, test_player} = Player.bribe_mugger(context.player)
+      assert test_player.funds < context.player.funds
+
+      loss = context.player.funds - test_player.funds
+      assert loss / context.player.funds <= 0.6
+      assert loss / context.player.funds >= 0.2
+    end
+  end
+
 
   # describe ".pay_mugger :cuts" do
   #   setup _context do
