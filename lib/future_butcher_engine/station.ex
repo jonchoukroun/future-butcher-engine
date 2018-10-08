@@ -7,23 +7,28 @@ defmodule FutureButcherEngine.Station do
   @stations %{
     :beverly_hills => %{
       :base_crime_rate => 1,
-      :travel_time     => 3
+      :travel_time     => 3,
+      :max_adjustment  => 0.6
       },
     :downtown => %{
       :base_crime_rate => 2,
-      :travel_time     => 2
+      :travel_time     => 2,
+      :max_adjustment  => 0.7
       },
     :venice_beach => %{
       :base_crime_rate => 3,
-      :travel_time     => 2
+      :travel_time     => 2,
+      :max_adjustment  => 0.8
       },
     :hollywood => %{
       :base_crime_rate => 4,
-      :travel_time     => 1
+      :travel_time     => 1,
+      :max_adjustment  => 0.9
       },
     :compton => %{
       :base_crime_rate => 5,
-      :travel_time     => 0
+      :travel_time     => 0,
+      :max_adjustment  => 1.0
       },
     :bell_gardens => %{
       :travel_time => 1
@@ -43,6 +48,9 @@ defmodule FutureButcherEngine.Station do
 
   def get_travel_time(station) when station in @station_names, do: @stations[station].travel_time
 
+  def get_max_adjustment(:bell_gardens), do: {:error, :invalid_station}
+  def get_max_adjustment(station), do: @stations[station].max_adjustment
+
   def new(:bell_gardens, turns_left) when turns_left > 20, do: {:error, :store_not_open}
   def new(:bell_gardens, turns_left) do
     %Station{
@@ -55,7 +63,7 @@ defmodule FutureButcherEngine.Station do
   def new(station, _turns_left) when station in @station_names do
     %Station{
       station_name: station,
-      market:       generate_market(),
+      market:       generate_market(station),
       store:        nil
     }
   end
@@ -122,13 +130,20 @@ defmodule FutureButcherEngine.Station do
 
   # Market ---------------------------------------------------------------------
 
-  defp generate_market() do
-    Map.new(Cut.cut_names(), fn cut -> {cut, generate_cut(cut)} end)
+  defp generate_market(station) do
+    Map.new(Cut.cut_names(), fn cut -> {cut, generate_cut(cut, station)} end)
   end
 
-  defp generate_cut(cut) do
-    quantity = Enum.random(0..Cut.maximum_quantity(cut))
+  defp generate_cut(cut, station) do
+    quantity = Enum.random(get_min(station)..get_max(cut, station))
     %{quantity: quantity, price: get_price(quantity, cut)}
+  end
+
+  defp get_min(:compton), do: 1
+  defp get_min(_station), do: 0
+
+  defp get_max(cut, station) do
+    round(Cut.maximum_quantity(cut) * get_max_adjustment(station))
   end
 
   defp get_price(quantity, cut) when quantity > 0 do
