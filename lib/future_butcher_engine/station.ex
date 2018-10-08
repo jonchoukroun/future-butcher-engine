@@ -41,6 +41,8 @@ defmodule FutureButcherEngine.Station do
   end
   def get_base_crime_rate(_station), do: {:error, :invalid_station}
 
+  def get_travel_time(station) when station in @station_names, do: @stations[station].travel_time
+
   def new(:bell_gardens, turns_left) when turns_left > 20, do: {:error, :store_not_open}
   def new(:bell_gardens, turns_left) do
     %Station{

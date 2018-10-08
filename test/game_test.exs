@@ -75,35 +75,52 @@ defmodule GameTest do
 
   # Travel/transit -------------------------------------------------------------
 
-  describe ".change_station" do
+  describe ".change_station compton" do
     setup [:setup_game, :navigate_to_compton]
 
     test "should update game state", context do
       random_occurence_outcomes = [:mugging, :in_game]
-      assert Enum.member?(random_occurence_outcomes, context.state.rules.state)
+      assert Enum.member?(random_occurence_outcomes, context.test_state.rules.state)
     end
 
     test "should update station name", context do
-      assert context.state.station.station_name == :compton
+      assert context.test_state.station.station_name == :compton
     end
 
-    test "should decrement turns left", context do
-      assert context.state.rules.turns_left === 23
+    test "should not decrement turns left", context do
+      assert context.test_state.rules.turns_left === context.state.rules.turns_left
     end
 
     test "should accrue player debt", context do
-      assert context.state.player.debt === 5750
+      assert context.test_state.player.debt === 5750
     end
 
-    # test "should return end game with no turns left", context do
-    #   test_rules = %Rules{context.test_state.rules | turns_left: 0}
-    #   :sys.replace_state context.game, fn _state -> %{context.test_state | rules: test_rules} end
-    #
-    #   {end_response, end_state} = Game.change_station(context.game, :hollywood)
-    #
-    #   assert end_response          === :game_over
-    #   assert end_state.rules.state === :game_over
-    # end
+  end
+
+  describe ".change_station beverly_hills" do
+    setup [:setup_game, :navigate_to_beverly_hills]
+
+    test "should decrement turns left", context do
+      assert context.test_state.rules.turns_left < context.state.rules.turns_left
+    end
+  end
+
+  describe ".change_station with no turns left" do
+    setup [:setup_game, :zero_turns]
+
+    test "should end game", context do
+      {end_response, end_state} = Game.change_station(context.game, :compton)
+      assert end_response          === :game_over
+      assert end_state.rules.state === :game_over
+    end
+  end
+
+  describe ".change_turns with insufficient turns left" do
+    setup [:setup_game, :reduce_turns]
+
+    test "should return error", context do
+      assert Game.change_station(context.game, :beverly_hills) === :insufficient_turns
+    end
   end
 
 
@@ -113,7 +130,7 @@ defmodule GameTest do
     setup [:setup_game, :initiate_mugging, :lose_mugging]
 
     test "should impose turns penalty", context do
-      assert context.base_state.rules.turns_left > context.test_state.rules.turns_left
+      assert context.state.rules.turns_left > context.test_state.rules.turns_left
     end
 
     test "should restore in_game state", context do
@@ -129,7 +146,7 @@ defmodule GameTest do
     end
 
     test "should incur no turns penalty", context do
-      assert context.base_state.rules.turns_left === context.test_state.rules.turns_left
+      assert context.state.rules.turns_left === context.test_state.rules.turns_left
     end
   end
 
@@ -161,7 +178,12 @@ defmodule GameTest do
 
     defp navigate_to_compton(context) do
       Game.change_station(context.game, :compton)
-      %{game: context.game, state: :sys.get_state(context.game)}
+      %{game: context.game, test_state: :sys.get_state(context.game)}
+    end
+
+    defp navigate_to_beverly_hills(context) do
+      Game.change_station(context.game, :beverly_hills)
+      %{game: context.game, test_state: :sys.get_state(context.game)}
     end
 
     defp initiate_mugging(context) do
@@ -172,7 +194,7 @@ defmodule GameTest do
 
     defp lose_mugging(context) do
       Game.fight_mugger(context.game)
-      %{game: context.game, base_state: context.state, test_state: :sys.get_state(context.game)}
+      %{game: context.game, test_state: :sys.get_state(context.game)}
     end
 
     defp win_mugging(context) do
@@ -183,7 +205,7 @@ defmodule GameTest do
 
       case :sys.get_state(context.game).rules.turns_left do
         ^current_turns ->
-          %{game: context.game, base_state: context.state, test_state: :sys.get_state(context.game)}
+          %{game: context.game, test_state: :sys.get_state(context.game)}
 
         _ ->
           win_mugging(context)
@@ -195,6 +217,18 @@ defmodule GameTest do
       :sys.replace_state(context.game, fn _state -> %{context.state | player: armed_player} end)
 
       %{game: context.game, state: :sys.get_state(context.game)}
+    end
+
+    defp zero_turns(context) do
+      rules = %Rules{context.state.rules | turns_left: 0}
+      state = :sys.replace_state(context.game, fn _state -> %{context.state | rules: rules} end)
+      %{game: context.game, test_state: state}
+    end
+
+    defp reduce_turns(context) do
+      rules = %Rules{context.state.rules | turns_left: 2}
+      state = :sys.replace_state(context.game, fn _state -> %{context.state | rules: rules} end)
+      %{game: context.game, test_state: state}
     end
 
 end

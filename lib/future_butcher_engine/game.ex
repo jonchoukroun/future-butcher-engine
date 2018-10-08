@@ -7,8 +7,6 @@ defmodule FutureButcherEngine.Game do
 
   @stations [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton, :bell_gardens]
 
-  @mugging_responses [:funds, :cuts]
-
   @turns 25
 
   # Temporarily set to full day during dev
@@ -189,7 +187,7 @@ defmodule FutureButcherEngine.Game do
        {:ok, player} <- Player.accrue_debt(state_data.player)
     do
       state_data
-      |> update_rules(decrement_turn(rules, 1))
+      |> update_rules(decrement_turn(rules, Station.get_travel_time(destination)))
       |> update_player(player)
       |> travel_to(destination)
       |> reply_success(:ok)
@@ -306,8 +304,13 @@ defmodule FutureButcherEngine.Game do
   defp valid_destination?(_current_station, turns_left, :bell_gardens)
   when turns_left > 20, do: {:error, :station_not_open}
 
-  defp valid_destination?(_current_station, _turns, destination)
-  when destination in @stations, do: {:ok}
+  defp valid_destination?(_current_station, turns_left, destination)
+  when destination in @stations do
+    case Station.get_travel_time(destination) > turns_left do
+      true  -> {:error, :insufficient_turns}
+      false -> {:ok}
+    end
+  end
 
   defp valid_destination?(_station_name, _turns_left, _destination), do: {:error, :invalid_station}
 

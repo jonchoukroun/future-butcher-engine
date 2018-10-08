@@ -55,6 +55,8 @@ defmodule FutureButcherEngine.StationTest do
   describe ".random_encounter last turn" do
     test "should end transit" do
       assert Station.random_encounter(20, 0, :beverly_bills) === {:ok, :end_transit}
+      assert Station.random_encounter(60, 0, :compton) === {:ok, :end_transit}
+      assert Station.random_encounter(20, 0, :bell_gardens) === {:ok, :end_transit}
     end
   end
 
@@ -86,7 +88,7 @@ defmodule FutureButcherEngine.StationTest do
       assert is_float(Station.calculate_mugging_probability(30, 24, :hollywood))
     end
   end
-  
+
 
   # Named setups ===============================================================
 
