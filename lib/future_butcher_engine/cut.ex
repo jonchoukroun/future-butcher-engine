@@ -33,6 +33,10 @@ defmodule FutureButcherEngine.Cut do
 
   def new(_), do: {:error, :missing_inputs}
 
+  defp calculate_price(:heart, 0), do: Enum.random(50000..100000)
+  defp calculate_price(:flank, 0), do: Enum.random(20000..40000)
+  defp calculate_price(_type, 0), do: nil
+
   defp calculate_price(type, quantity) do
     slope     = @cut_values[type][:slope]
     max_price = @cut_values[type][:price_intercept]
