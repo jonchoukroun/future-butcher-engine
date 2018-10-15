@@ -8,9 +8,8 @@ defmodule FutureButcherEngine.PlayerTest do
   test "New players created with an empty pack, and no capital or weapon" do
     player = Player.new("Frank")
     assert player.player_name == "Frank"
-    assert player.funds       == 0
-    assert player.debt        == 0
-    assert player.rate        == 0
+    assert player.funds       == 5000
+    assert player.debt        == 5000
     assert player.pack_space  == 20
     assert player.weapon      == nil
 
@@ -23,23 +22,20 @@ defmodule FutureButcherEngine.PlayerTest do
   # Packs ----------------------------------------------------------------------
 
   describe ".buy_pack" do
-    setup _context do
-      {:ok, player} = Player.new("Frank") |> Player.adjust_funds(:increase, 3000)
-      %{player: player}
-    end
+    setup [:initialize_player]
 
     test "with less space than current pack", context do
-      assert Player.buy_pack(context.player, 19, 100) == {:error, :no_pack_upgrade}
+      assert Player.buy_pack(context.player, 19, 100) == {:error, :must_upgrade_pack}
     end
 
     test "with insufficient funds", context do
-      assert Player.buy_pack(context.player, 25, 5000) == {:error, :insufficient_funds}
+      assert Player.buy_pack(context.player, 25, 6000) == {:error, :insufficient_funds}
     end
 
     test "with more space", context do
       {:ok, test_player} = Player.buy_pack(context.player, 25, 500)
       assert test_player.pack_space == 25
-      assert test_player.funds      == 2500
+      assert test_player.funds      == 4500
     end
   end
 
@@ -47,56 +43,39 @@ defmodule FutureButcherEngine.PlayerTest do
   # Debt/Loans -----------------------------------------------------------------
 
   describe ".accrue_debt" do
-    setup _context do
-      %{player: Player.new("Frank")}
-    end
+    setup [:initialize_player]
 
     test "with no debt does nothing", context do
-      {:ok, test_player} = Player.accrue_debt(context.player)
-      assert test_player == context.player
+      player = %Player{context.player | debt: 0}
+      {:ok, test_player} = Player.accrue_debt(player)
+      assert test_player === player
     end
 
     test "with debt raises debt by interest rate amount", context do
-      {:ok, player} = Player.buy_loan(context.player, 5000, 0.2)
-      {:ok, test_player} = Player.accrue_debt(player)
-      assert test_player.debt == 6000
+      {:ok, test_player} = Player.accrue_debt(context.player)
+      assert test_player.debt === 5750
     end
   end
 
-  describe ".buy_loan" do
-    setup _context do
-      %{player: Player.new("Frank")}
-    end
+  describe ".pay_debt with debt greater than funds" do
+    setup [:initialize_player, :zero_funds]
 
-    test "with loan rate as integer converts to float", context do
-      {:ok, test_player} = Player.buy_loan(context.player, 1000, 2)
-      assert test_player.debt == 1000
-      assert test_player.rate == 2.0
-    end
-
-    test "with existing debt returns error", context do
-      {:ok, test_player} = Player.buy_loan(context.player, 1000, 0.4)
-      assert Player.buy_loan(test_player, 1000, 0.25) == {:error, :already_has_debt}
+    test "should return error", context do
+      assert Player.pay_debt(context.player) === {:error, :insufficient_funds}
     end
   end
 
-  describe ".pay_debt" do
-    setup _context do
-      {:ok, player} = Player.new("Frank") |> Player.buy_loan(1000, 0.1)
-      {:ok, player} = Player.adjust_funds(player, :increase, 2000)
-      %{player: player}
+  describe ".pay_debt with funds greater than debt" do
+    setup [:initialize_player, :increase_funds]
+
+    test "should clear debt", context do
+      {:ok, test_player} = Player.pay_debt(context.player)
+      assert test_player.debt === 0
     end
 
-    test "with full amount clears debt and rate", context do
-      {:ok, test_player} = Player.pay_debt(context.player, 1000)
-      assert test_player.funds == 2000
-      assert test_player.debt  == 0
-      assert test_player.rate  == 0.0
-    end
-
-    test "with amount greater than funds returns error", context do
-      {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 2500)
-      assert Player.pay_debt(test_player, 1000) == {:error, :insufficient_funds}
+    test "should reduce funds by amount of debt", context do
+      {:ok, test_player} = Player.pay_debt(context.player)
+      assert test_player.funds === 3000
     end
   end
 
@@ -104,10 +83,7 @@ defmodule FutureButcherEngine.PlayerTest do
   # Buy/Sell Cuts --------------------------------------------------------------
 
   describe ".buy_cut" do
-    setup _context do
-      {:ok, player} = Player.new("Frank") |> Player.adjust_funds(:increase, 5000)
-      %{player: player}
-    end
+    setup [:initialize_player]
 
     test "with insufficient funds returns error", context do
       assert Player.buy_cut(context.player, :loin, 4, 10_000) == {:error, :insufficient_funds}
@@ -125,11 +101,7 @@ defmodule FutureButcherEngine.PlayerTest do
   end
 
   describe ".sell_cut" do
-    setup _context do
-      {:ok, player} = Player.new("Frank") |> Player.adjust_funds(:increase, 2000)
-      {:ok, player} = Player.buy_cut(player, :ribs, 5, 500)
-      %{player: player}
-    end
+    setup [:initialize_player, :buy_cut]
 
     test "with more cuts than owned", context do
       assert Player.sell_cut(context.player, :ribs, 6, 500) == {:error, :insufficient_cuts}
@@ -139,7 +111,7 @@ defmodule FutureButcherEngine.PlayerTest do
       {:ok, test_player} = Player.sell_cut(context.player, :ribs, 5, 1000)
 
       assert test_player.pack.ribs == 0
-      assert test_player.funds     == 2500
+      assert test_player.funds     == 5500
     end
   end
 
@@ -147,165 +119,146 @@ defmodule FutureButcherEngine.PlayerTest do
   # Weapons --------------------------------------------------------------------
 
   describe ".buy_weapon with no current weapon" do
-    setup _context do
-      {:ok, player} = Player.new("Frank") |> Player.adjust_funds(:increase, 3000)
-      %{player: player}
-    end
+    setup [:initialize_player]
 
-    test "with sufficient funds and pack space adds weapon and decreases funds", context do
+    test "with sufficient funds should add weapon and decrease funds", context do
       {:ok, test_player } = Player.buy_weapon(context.player, :machete, 1000)
-      assert test_player.funds  == 2000
+      assert test_player.funds  == 4000
       assert test_player.weapon == :machete
     end
 
-    test "with insufficient funds returns error", context do
-      {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 2000)
-      assert Player.buy_weapon(test_player, :machete, 2000) == {:error, :insufficient_funds}
+    test "with insufficient funds should return error", context do
+      assert Player.buy_weapon(context.player, :machete, 8000) == {:error, :insufficient_funds}
     end
 
-    test "with invalid weapon type returns error", context do
+    test "with invalid weapon type should return error", context do
       assert Player.buy_weapon(context.player, :cat, 100) == {:error, :invalid_weapon_type}
     end
   end
 
   describe ".buy_weapon with existing weapon" do
-    setup _context do
-      {:ok, player} = Player.new("Frank") |> Player.buy_weapon(:hedge_clippers, 0)
-      %{player: player}
-    end
+    setup [:initialize_player, :buy_weapon]
 
-    test "returns error", context do
+    test "should return error", context do
       assert Player.buy_weapon(context.player, :box_cutter, 0) == {:error, :already_owns_weapon}
     end
   end
 
   describe ".replace_weapon with no existing weapon" do
-    setup _context do
-      %{player: Player.new("Frank")}
-    end
+    setup [:initialize_player]
 
-    test "returns error", context do
+    test "should return error", context do
       assert Player.replace_weapon(context.player, :machete, 0, 0) == {:error, :no_weapon_owned}
     end
   end
 
   describe ".replace_weapon with existing weapon" do
-    setup _context do
-      {:ok, player} = Player.new("Frank") |> Player.adjust_funds(:increase, 5000)
-      {:ok, player} = Player.buy_weapon(player, :box_cutter, 1000)
-      %{player: player}
-    end
+    setup [:initialize_player, :buy_weapon]
 
-    test "with insufficient funds + trade-in value returns error", context do
+    test "with insufficient funds + trade-in value should return error", context do
       assert Player.replace_weapon(context.player, :hedge_clippers, 6000, 100) ==
         {:error, :insufficient_funds}
     end
 
-    test "with same weapon as current weapon returns error", context do
+    test "with same weapon as current weapon should return error", context do
       assert Player.replace_weapon(context.player, :box_cutter, 0, 0) ==
         {:error, :same_weapon_type}
     end
 
-    test "with cheaper weapon than current weapon replaces weapon and adjusts funds", context do
+    test "with cheaper weapon should replace weapon and adjust funds", context do
       {:ok, test_player} = Player.replace_weapon(context.player, :brass_knuckles, 500, 200)
       assert test_player.weapon == :brass_knuckles
-      assert test_player.funds  == 3700
+      assert test_player.funds  == 4700
     end
 
-    test "with valid args replaces weapon and adjusts funds", context do
+    test "with valid args should replace weapon and adjust funds", context do
       {:ok, test_player} = Player.replace_weapon(context.player, :machete, 1000, 200)
       assert test_player.weapon == :machete
-      assert test_player.funds  == 3200
+      assert test_player.funds  == 4200
     end
 
-    test "with insufficient funds but enough value replaces weapon and adjusts funds", context do
-      {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 4000)
-      assert test_player.funds == 0
-
-      {:ok, test_player} = Player.replace_weapon(test_player, :hedge_clippers, 500, 1000)
+    test "with insufficient funds, enough value should replace weapon and adjust funds", context do
+      {:ok, test_player} = Player.replace_weapon(context.player, :hedge_clippers, 5000, 1500)
       assert test_player.weapon == :hedge_clippers
-      assert test_player.funds  == 500
+      assert test_player.funds  == 1500
     end
   end
 
 
   # Muggings -------------------------------------------------------------------
 
+  describe ".fight_mugger with no weapon" do
+    setup [:initialize_player]
+
+    test "should return defeat", context do
+      assert Player.fight_mugger(context.player) === {:ok, context.player, :defeat}
+    end
+  end
+
   describe ".fight_mugger" do
-    setup _context do
-      %{player: Player.new("Frank")}
+    setup [:initialize_player, :buy_weapon]
+
+    test "should return defeat or victory", context do
+      fight_outcomes = [:defeat, :victory]
+
+      {:ok, _player, test_outcome} = Player.fight_mugger(context.player)
+      assert Enum.member?(fight_outcomes, test_outcome)
     end
 
-    test "with no weapon returns defeat", context do
-      assert Player.fight_mugger(context.player) == {:ok, context.player, :defeat}
-    end
+    test "victory may increase cuts owned", context do
+      base_cuts_owned = get_pack_sum(context.player.pack)
 
-    test "with a weapon returns defeat or victory", context do
-      {:ok, test_player} = Player.buy_weapon(context.player, :machete, 0)
-      case Player.fight_mugger(test_player) do
-        {:ok, player, :defeat} ->
-          assert player === test_player
-        {:ok, player, :victory} ->
-          starting_cuts = Enum.reduce(test_player.pack, 0, fn(cut, acc) -> acc + elem(cut, 1) end)
-          test_cuts     = Enum.reduce(player.pack, 0, fn(cut, acc) -> acc + elem(cut, 1) end)
+      case Player.fight_mugger(context.player) do
+        {:ok, test_player, :victory} ->
+          cuts_owned = get_pack_sum(test_player.pack)
+          assert cuts_owned >= base_cuts_owned
 
-          assert test_cuts >= starting_cuts
+        {:ok, _player, :defeat} -> :ok
       end
     end
   end
 
-  describe ".pay_mugger :cuts" do
-    setup _context do
-      %{player: Player.new("Frank")}
-    end
+  describe ".bribe_mugger with sufficient funds" do
+    setup [:initialize_player]
 
-    test "with no cuts returns error", context do
-      assert Player.pay_mugger(context.player, :cuts) == {:error, :no_cuts_owned}
-    end
+    test "should reduce funds by at least 20 but no more than 60%", context do
+      {:ok, test_player} = Player.bribe_mugger(context.player)
+      assert test_player.funds < context.player.funds
 
-    test "with 1 cut type removes all cuts", context do
-      {:ok, test_player} = Player.buy_cut(context.player, :heart, 3, 0)
-      {:ok, test_player} = Player.pay_mugger(test_player, :cuts)
-      assert test_player.pack.heart == 0
-    end
-
-    test "with multiple cut types owned removes all of 1 cut type", context do
-      {:ok, player} = Player.buy_cut(context.player, :heart, 3, 0)
-      {:ok, player} = Player.buy_cut(player, :loin, 2, 0)
-      {:ok, player} = Player.buy_cut(player, :ribs, 1, 0)
-
-      {:ok, test_player} = Player.pay_mugger(player, :cuts)
-      assert Map.keys(test_player.pack)
-              |> Enum.filter(fn cut -> test_player.pack[cut] > 0 end)
-              |> Enum.count == 2
+      loss = context.player.funds - test_player.funds
+      assert loss / context.player.funds <= 0.6
+      assert loss / context.player.funds >= 0.2
     end
   end
 
-  describe ".pay_mugger :funds" do
-    setup _context do
-      {:ok, player} = Player.new("Frank") |> Player.adjust_funds(:increase, 1000)
-      %{player: player}
-    end
+  describe ".bribe_mugger with insufficient funds and single cut type owned" do
+    setup [:initialize_player, :buy_cut, :zero_funds]
 
-    test "with no funds returns error", context do
-      {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 1000)
-      assert Player.pay_mugger(test_player, :funds) == {:error, :insufficient_funds}
-    end
-
-    test "with funds decreases player's funds", context do
-      {:ok, test_player} = Player.pay_mugger(context.player, :funds)
-      assert context.player.funds > test_player.funds
-    end
-
-    test "does not decrease cuts", context do
-      {:ok, test_player} = Player.pay_mugger(context.player, :funds)
-      assert test_player.pack === context.player.pack
+    test "should zero out owned cuts", context do
+      {:ok, test_player} = Player.bribe_mugger(context.player)
+      assert get_pack_sum(test_player.pack) === 0
     end
   end
 
-  describe ".pay_mugger :fish" do
-    test "with invalid payoff type" do
-      assert Player.pay_mugger(Player.new("Frank"), :fish) == {:error, :invalid_mugging_response}
+  describe ".bribe_mugger with insufficient funds and 2 cut types owned" do
+    setup [:initialize_player, :buy_cut, :add_other_cuts, :zero_funds]
+
+    test "should zero out only 1 cut type", context do
+      base_cuts_owned = get_pack_sum(context.player.pack)
+
+      {:ok, test_player} = Player.bribe_mugger(context.player)
+      test_cuts_owned = get_pack_sum(test_player.pack)
+
+      assert test_cuts_owned !== 0
+      assert test_cuts_owned < base_cuts_owned
+    end
+  end
+
+  describe ".bribe_mugger with insufficient funds and no cuts" do
+    setup [:initialize_player, :zero_funds]
+
+    test "should return error", context do
+      assert Player.bribe_mugger(context.player) === {:error, :cannot_bribe_mugger}
     end
   end
 
@@ -313,25 +266,59 @@ defmodule FutureButcherEngine.PlayerTest do
   # Funds ----------------------------------------------------------------------
 
   describe ".adjust_funds" do
-    setup _context do
-      {:ok, player} = Player.new("Frank") |> Player.buy_loan(1000, 0.1)
-      %{player: player}
-    end
+    setup [:initialize_player]
 
-    test "decreasing by more than availabled funds zeroes player funds", context do
-      {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 2000)
+    test "when decreasing by more than availabled funds should zero player funds", context do
+      {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 6000)
       assert test_player.funds == 0
     end
 
-    test "decreasing by less than funds returns expected amount", context do
+    test "when decreasing by less than funds should return expected amount", context do
       {:ok, test_player} = Player.adjust_funds(context.player, :decrease, 500)
-      assert test_player.funds == 500
+      assert test_player.funds == 4500
     end
 
-    test "increasing raises player funds", context do
+    test "when increasing should raise player funds", context do
       {:ok, test_player} = Player.adjust_funds(context.player, :increase, 1000)
-      assert test_player.funds == 2000
+      assert test_player.funds == 6000
     end
+  end
+
+
+  # Named setups ===============================================================
+
+  defp initialize_player(_context) do
+    %{player: Player.new "Frank"}
+  end
+
+  defp zero_funds(context) do
+    %{player: %Player{context.player | funds: 0}}
+  end
+
+  defp increase_funds(context) do
+    %{player: %Player{context.player | funds: 8000}}
+  end
+
+  defp buy_cut(context) do
+    {:ok, player} = Player.buy_cut(context.player, :ribs, 5, 500)
+    %{player: player}
+  end
+
+  defp add_other_cuts(context) do
+    {:ok, player} = Player.buy_cut(context.player, :heart, 5, 0)
+    %{player: player}
+  end
+
+  defp buy_weapon(context) do
+    {:ok, player} = Player.buy_weapon(context.player, :box_cutter, 0)
+    %{player: player}
+  end
+
+
+  # Utilities ==================================================================
+
+  defp get_pack_sum(pack) do
+    Map.values(pack) |> Enum.reduce(0, fn(sum, n) -> sum + n end)
   end
 
 end
