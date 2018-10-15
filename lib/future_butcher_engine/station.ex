@@ -139,18 +139,19 @@ defmodule FutureButcherEngine.Station do
     %{quantity: quantity, price: get_price(quantity, cut)}
   end
 
-  defp get_min(:compton), do: 1
+  defp get_min(:compton), do: 4
+  defp get_min(:hollywood), do: 3
+  defp get_min(:venice_beach), do: 2
+  defp get_min(:downtown), do: 2
   defp get_min(_station), do: 0
 
   defp get_max(cut, station) do
     round(Cut.maximum_quantity(cut) * get_max_adjustment(station))
   end
 
-  defp get_price(quantity, cut) when quantity > 0 do
+  defp get_price(quantity, cut) do
     {:ok, current_price} = Cut.new(cut, quantity)
     current_price.price
   end
-
-  defp get_price(_quantity, _cut), do: nil
 
 end
