@@ -7,49 +7,63 @@ defmodule FutureButcherEngine.Station do
   @stations %{
     :beverly_hills => %{
       :base_crime_rate => 1,
-      :cuts_list => [:heart, :flank]
-    },
+      :travel_time     => 3,
+      :max_adjustment  => 0.6
+      },
     :downtown => %{
       :base_crime_rate => 2,
-      :cuts_list => [:heart, :flank, :ribs]
-    },
+      :travel_time     => 2,
+      :max_adjustment  => 0.7
+      },
     :venice_beach => %{
       :base_crime_rate => 3,
-      :cuts_list => [:ribs, :loin, :liver]
-    },
+      :travel_time     => 2,
+      :max_adjustment  => 0.8
+      },
     :hollywood => %{
       :base_crime_rate => 4,
-      :cuts_list => [:loin, :liver]
-    },
+      :travel_time     => 1,
+      :max_adjustment  => 0.9
+      },
     :compton => %{
       :base_crime_rate => 5,
-      :cuts_list => Cut.cut_names
+      :travel_time     => 0,
+      :max_adjustment  => 1.0
+      },
+    :bell_gardens => %{
+      :travel_time => 1
     }
   }
 
-  @station_names [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton]
+  @station_names [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton, :bell_gardens]
 
   def station_names, do: @station_names
 
-  def station_cuts(station), do: @stations[station].cuts_list
+  def get_base_crime_rate(:bell_gardens), do: {:error, :invalid_station}
 
   def get_base_crime_rate(station) when station in @station_names do
     @stations[station].base_crime_rate
   end
   def get_base_crime_rate(_station), do: {:error, :invalid_station}
 
-  def new(station, turns_left) when station == :venice_beach do
+  def get_travel_time(station) when station in @station_names, do: @stations[station].travel_time
+
+  def get_max_adjustment(:bell_gardens), do: {:error, :invalid_station}
+  def get_max_adjustment(station), do: @stations[station].max_adjustment
+
+  def new(:bell_gardens, turns_left) when turns_left > 20, do: {:error, :store_not_open}
+  def new(:bell_gardens, turns_left) do
     %Station{
-      station_name: station,
-      market:       generate_market(station, turns_left),
-      store:        generate_store(turns_left)
+      station_name: :bell_gardens,
+      store:        generate_store(turns_left),
+      market:       nil
     }
   end
 
-  def new(station, turns_left) when station in @station_names do
+  def new(station, _turns_left) when station in @station_names do
     %Station{
       station_name: station,
-      market:       generate_market(station, turns_left),
+      market:       generate_market(station),
       store:        nil
     }
   end
@@ -57,27 +71,11 @@ defmodule FutureButcherEngine.Station do
   def new(_station, _turns_left), do: {:error, :invalid_station}
 
 
-  # Banking --------------------------------------------------------------------
-
-  def validate_station(:downtown, :loans), do: {:ok}
-  def validate_station(_station, :loans), do: {:error, :must_be_downtown}
-
-
-  # Entry fee ------------------------------------------------------------------
-
-  def generate_entry_fee(:compton, _turns_left), do: {:ok, 0}
-
-  def generate_entry_fee(station, turns_left) do
-    crime_rate   = get_base_crime_rate(station)
-    current_turn = 25 - turns_left
-    fee = 2 * (5 - crime_rate) * :math.pow(current_turn, 2) - (100 * crime_rate) + 500 |> round()
-    {:ok, fee}
-  end
-
-
   # Mugging --------------------------------------------------------------------
 
-  def random_encounter(_space, turns_left, _station) when turns_left === 0, do: {:ok, :end_transit}
+  def random_encounter(_pack_space, _turns_left, :bell_gardens), do: {:ok, :end_transit}
+
+  def random_encounter(_pack_space, 0, _station), do: {:ok, :end_transit}
 
   def random_encounter(pack_space, turns_left, station) do
     p = calculate_mugging_probability(pack_space, turns_left, station)
@@ -88,8 +86,8 @@ defmodule FutureButcherEngine.Station do
     end
   end
 
-  def calculate_mugging_probability(20, _turns_left, :compton), do: 0.40
-  def calculate_mugging_probability(_pack_space, _turns_left, :compton), do: 0.55
+  def calculate_mugging_probability(20, _turns_left, :compton), do: 0.45
+  def calculate_mugging_probability(_pack_space, _turns_left, :compton), do: 0.65
 
   def calculate_mugging_probability(pack_space, turns_left, station) do
     base_crime_rate = get_base_crime_rate(station)
@@ -105,50 +103,47 @@ defmodule FutureButcherEngine.Station do
 
   # Store ----------------------------------------------------------------------
 
-  def generate_store(turns_left) when turns_left > 18, do: %{}
-
-  def generate_store(turns_left) when turns_left <= 12 do
-    generate_weapons_stock(turns_left)
-    |> Enum.concat(generate_packs_stock(turns_left))
-    |> Map.new()
-  end
+  def generate_store(turns_left) when turns_left > 20, do: %{}
 
   def generate_store(turns_left) do
-    generate_weapons_stock(turns_left)
+    Enum.concat(generate_weapons_stock(turns_left), generate_packs_stock(turns_left))
     |> Map.new()
   end
 
   def generate_weapons_stock(turns_left) do
-    select_available_stock(Weapon.weapon_types)
+    Weapon.weapon_types
     |> Enum.map(fn weapon -> {weapon, %{
         price:  Weapon.generate_price(weapon, turns_left),
-        weight: Weapon.get_weight(weapon)
+        damage: Weapon.get_damage(weapon),
+        cuts:   Weapon.get_cuts(weapon)
         }} end)
   end
 
   def generate_packs_stock(turns_left) do
-    select_available_stock(Pack.pack_types)
+    Pack.pack_types
     |> Enum.map(fn pack -> {pack, %{
         price:      Pack.generate_price(pack, turns_left),
         pack_space: Pack.get_pack_space(pack)
         }} end)
   end
 
-  defp select_available_stock(inventory) do
-    inventory
-    |> Enum.reject(fn _item -> Enum.random(1..10) < 6 end)
-  end
-
 
   # Market ---------------------------------------------------------------------
 
-  defp generate_market(station, turns_left) do
-    Map.new(station_cuts(station), fn cut -> {cut, generate_cut(cut, station, turns_left)} end)
+  defp generate_market(station) do
+    Map.new(Cut.cut_names(), fn cut -> {cut, generate_cut(cut, station)} end)
   end
 
-  defp generate_cut(cut, station, turns_left) do
-    quantity = Enum.random(0..Cut.maximum_quantity(cut))
+  defp generate_cut(cut, station) do
+    quantity = Enum.random(get_min(station)..get_max(cut, station))
     %{quantity: quantity, price: get_price(quantity, cut)}
+  end
+
+  defp get_min(:compton), do: 1
+  defp get_min(_station), do: 0
+
+  defp get_max(cut, station) do
+    round(Cut.maximum_quantity(cut) * get_max_adjustment(station))
   end
 
   defp get_price(quantity, cut) when quantity > 0 do
