@@ -184,7 +184,7 @@ defmodule FutureButcherEngine.Game do
       {:ok, outcome} <- Station.random_encounter(
                           state_data.player.pack_space, state_data.rules.turns_left, destination),
         {:ok, rules} <- Rules.check(state_data.rules, outcome),
-       {:ok, player} <- Player.accrue_debt(state_data.player)
+       {:ok, player} <- Player.accrue_debt(state_data.player, Station.get_travel_time(destination))
     do
       state_data
       |> update_rules(decrement_turns(rules, Station.get_travel_time(destination)))
@@ -201,7 +201,8 @@ defmodule FutureButcherEngine.Game do
   def handle_call({:fight_mugger}, _from, state_data) do
     with        {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
       {:ok, player, outcome} <- Player.fight_mugger(state_data.player),
-        {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left, outcome)
+        {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left, outcome),
+               {:ok, player} <- Player.accrue_debt(state_data.player, turns_penalty)
     do
       state_data
       |> update_player(player)

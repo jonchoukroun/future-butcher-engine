@@ -1,6 +1,6 @@
 defmodule GameTest do
   use ExUnit.Case
-  alias FutureButcherEngine.{Game, GameSupervisor, Rules, Player}
+  alias FutureButcherEngine.{Game, GameSupervisor, Rules, Player, Station}
 
 
   # Game init ------------------------------------------------------------------
@@ -83,7 +83,8 @@ defmodule GameTest do
     end
 
     test "should accrue player debt", context do
-      assert context.test_state.player.debt === 5750
+      expected_debt = 5000 * :math.pow(1.15, Station.get_travel_time(:hollywood)) |> round()
+      assert context.test_state.player.debt === expected_debt
     end
 
   end
@@ -112,6 +113,13 @@ defmodule GameTest do
 
     test "should impose turns penalty", context do
       assert context.state.rules.turns_left > context.test_state.rules.turns_left
+    end
+
+    test "should accrue debt for lost turns", context do
+      turns_lost = context.state.rules.turns_left - context.test_state.rules.turns_left
+      base_debt = context.state.player.debt
+      expected_debt = base_debt * :math.pow(1.15, turns_lost) |> round()
+      assert context.test_state.player.debt === expected_debt
     end
 
     test "should restore in_game state", context do
