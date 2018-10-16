@@ -1,11 +1,11 @@
 defmodule FutureButcherEngine.Weapon do
 
   @weapons %{
-    :hockey_stick   => %{:damage => 8, :cuts => []},
-    :machete        => %{:damage => 7, :cuts => [:ribs, :loin, :flank]},
-    :hedge_clippers => %{:damage => 6, :cuts => [:ribs, :flank, :liver, :heart]},
-    :brass_knuckles => %{:damage => 3, :cuts => []},
-    :box_cutter     => %{:damage => 4, :cuts => [:loin, :heart, :liver, :flank]}
+    :hockey_stick   => %{:damage => 9, :cuts => []},
+    :machete        => %{:damage => 8, :cuts => [:ribs, :loin, :flank]},
+    :hedge_clippers => %{:damage => 7, :cuts => [:ribs, :flank, :liver, :heart]},
+    :brass_knuckles => %{:damage => 6, :cuts => []},
+    :box_cutter     => %{:damage => 5, :cuts => [:loin, :heart, :liver, :flank]}
   }
 
   @weapons_list Map.keys(@weapons)
