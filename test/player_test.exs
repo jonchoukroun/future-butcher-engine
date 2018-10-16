@@ -47,13 +47,18 @@ defmodule FutureButcherEngine.PlayerTest do
 
     test "with no debt does nothing", context do
       player = %Player{context.player | debt: 0}
-      {:ok, test_player} = Player.accrue_debt(player)
+      {:ok, test_player} = Player.accrue_debt(player, 1)
       assert test_player === player
     end
 
     test "with debt raises debt by interest rate amount", context do
-      {:ok, test_player} = Player.accrue_debt(context.player)
+      {:ok, test_player} = Player.accrue_debt(context.player, 1)
       assert test_player.debt === 5750
+    end
+
+    test "with multiple turns accrues debt concurrently", context do
+      {:ok, test_player} = Player.accrue_debt(context.player, 5)
+      assert test_player.debt === 10057
     end
   end
 

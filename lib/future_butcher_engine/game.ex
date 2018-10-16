@@ -7,7 +7,7 @@ defmodule FutureButcherEngine.Game do
 
   @stations [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton, :bell_gardens]
 
-  @turns 25
+  @turns 24
 
   # Temporarily set to full day during dev
   @timeout 24 * 60 * 60 * 1000
@@ -116,8 +116,8 @@ defmodule FutureButcherEngine.Game do
     with {:ok, rules} <- Rules.check(state_data.rules, :start_game)
     do
       state_data
-      |> update_rules(decrement_turn(rules, 1))
-      |> travel_to(:downtown)
+      |> update_rules(rules)
+      |> travel_to(:compton)
       |> reply_success(:ok)
     else
       {:error, msg} -> {:reply, {:error, msg}, state_data}
@@ -184,10 +184,10 @@ defmodule FutureButcherEngine.Game do
       {:ok, outcome} <- Station.random_encounter(
                           state_data.player.pack_space, state_data.rules.turns_left, destination),
         {:ok, rules} <- Rules.check(state_data.rules, outcome),
-       {:ok, player} <- Player.accrue_debt(state_data.player)
+       {:ok, player} <- Player.accrue_debt(state_data.player, Station.get_travel_time(destination))
     do
       state_data
-      |> update_rules(decrement_turn(rules, Station.get_travel_time(destination)))
+      |> update_rules(decrement_turns(rules, Station.get_travel_time(destination)))
       |> update_player(player)
       |> travel_to(destination)
       |> reply_success(:ok)
@@ -201,11 +201,12 @@ defmodule FutureButcherEngine.Game do
   def handle_call({:fight_mugger}, _from, state_data) do
     with        {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
       {:ok, player, outcome} <- Player.fight_mugger(state_data.player),
-        {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left, outcome)
+        {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left, outcome),
+               {:ok, player} <- Player.accrue_debt(state_data.player, turns_penalty)
     do
       state_data
       |> update_player(player)
-      |> update_rules(decrement_turn(rules, turns_penalty))
+      |> update_rules(decrement_turns(rules, turns_penalty))
       |> reply_success(:ok)
     else
       {:error, msg} -> reply_failure(state_data, msg)
@@ -382,7 +383,7 @@ defmodule FutureButcherEngine.Game do
 
   defp update_rules(state_data, rules), do: %{state_data | rules: rules}
 
-  defp decrement_turn(rules, turns) do
+  defp decrement_turns(rules, turns) do
     rules |> Map.put(:turns_left, Map.get(rules, :turns_left) - turns)
   end
 

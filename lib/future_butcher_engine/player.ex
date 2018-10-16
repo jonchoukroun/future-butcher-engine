@@ -55,14 +55,14 @@ defmodule FutureButcherEngine.Player do
   # Debt/Loans -----------------------------------------------------------------
 
   @doc """
-  .accrue_debt/1: player
+  .accrue_debt/2: player, turns
   """
-  def accrue_debt(%Player{debt: debt} = player) when debt > 0 do
-    accrued_debt = debt * 0.15 |> round()
-    {:ok, player |> increase_attribute(:debt, accrued_debt)}
+  def accrue_debt(%Player{debt: debt} = player, turns) when debt > 0 do
+    accrued_debt = debt * :math.pow(1.15, turns) |> round()
+    {:ok, %Player{player | debt: accrued_debt}}
   end
 
-  def accrue_debt(player), do: {:ok, player}
+  def accrue_debt(player, _turns), do: {:ok, player}
 
   @doc """
   .pay_debt/1: player

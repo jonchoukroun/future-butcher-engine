@@ -7,27 +7,27 @@ defmodule FutureButcherEngine.Station do
   @stations %{
     :beverly_hills => %{
       :base_crime_rate => 1,
-      :travel_time     => 3,
-      :max_adjustment  => 0.6
+      :travel_time     => 5,
+      :max_adjustment  => 0.5
       },
     :downtown => %{
       :base_crime_rate => 2,
-      :travel_time     => 2,
-      :max_adjustment  => 0.7
+      :travel_time     => 4,
+      :max_adjustment  => 0.63
       },
     :venice_beach => %{
       :base_crime_rate => 3,
-      :travel_time     => 2,
-      :max_adjustment  => 0.8
+      :travel_time     => 3,
+      :max_adjustment  => 0.75
       },
     :hollywood => %{
       :base_crime_rate => 4,
-      :travel_time     => 1,
-      :max_adjustment  => 0.9
+      :travel_time     => 2,
+      :max_adjustment  => 0.88
       },
     :compton => %{
       :base_crime_rate => 5,
-      :travel_time     => 0,
+      :travel_time     => 1,
       :max_adjustment  => 1.0
       },
     :bell_gardens => %{
@@ -47,6 +47,7 @@ defmodule FutureButcherEngine.Station do
   def get_base_crime_rate(_station), do: {:error, :invalid_station}
 
   def get_travel_time(station) when station in @station_names, do: @stations[station].travel_time
+  def get_travel_time(_station), do: {:error, :invalid_station}
 
   def get_max_adjustment(:bell_gardens), do: {:error, :invalid_station}
   def get_max_adjustment(station), do: @stations[station].max_adjustment
