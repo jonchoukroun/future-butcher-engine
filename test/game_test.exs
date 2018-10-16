@@ -1,6 +1,6 @@
 defmodule GameTest do
   use ExUnit.Case
-  alias FutureButcherEngine.{Game, GameSupervisor, Rules, Player}
+  alias FutureButcherEngine.{Game, GameSupervisor, Rules, Player, Station}
 
 
   # Game init ------------------------------------------------------------------
@@ -19,7 +19,7 @@ defmodule GameTest do
     end
 
     test "sets turns and game state", context do
-      assert context.state.rules.turns_left == 25
+      assert context.state.rules.turns_left == 24
       assert context.state.rules.state      == :initialized
     end
 
@@ -31,18 +31,9 @@ defmodule GameTest do
   describe ".start_game" do
     setup [:setup_game]
 
-    test "Decrements turns", context do
-      assert context.state.rules.turns_left == 24
-    end
-
     test "Sets station to downtown", context do
-      assert context.state.station.station_name == :downtown
+      assert context.state.station.station_name == :compton
       assert context.state.station.market       != nil
-    end
-
-    test "Player is capitalized", context do
-      assert context.state.player.funds == 5000
-      assert context.state.player.debt  == 5000
     end
   end
 
@@ -75,8 +66,8 @@ defmodule GameTest do
 
   # Travel/transit -------------------------------------------------------------
 
-  describe ".change_station compton" do
-    setup [:setup_game, :navigate_to_compton]
+  describe ".change_station" do
+    setup [:setup_game, :navigate_to_hollywood]
 
     test "should update game state", context do
       random_occurence_outcomes = [:mugging, :in_game]
@@ -84,15 +75,16 @@ defmodule GameTest do
     end
 
     test "should update station name", context do
-      assert context.test_state.station.station_name == :compton
+      assert context.test_state.station.station_name == :hollywood
     end
 
-    test "should not decrement turns left", context do
-      assert context.test_state.rules.turns_left === context.state.rules.turns_left
+    test "should decrement turns left", context do
+      assert context.state.rules.turns_left - context.test_state.rules.turns_left === 2
     end
 
     test "should accrue player debt", context do
-      assert context.test_state.player.debt === 5750
+      expected_debt = 5000 * :math.pow(1.15, Station.get_travel_time(:hollywood)) |> round()
+      assert context.test_state.player.debt === expected_debt
     end
 
   end
@@ -102,16 +94,6 @@ defmodule GameTest do
 
     test "should decrement turns left", context do
       assert context.test_state.rules.turns_left < context.state.rules.turns_left
-    end
-  end
-
-  describe ".change_station with no turns left" do
-    setup [:setup_game, :zero_turns]
-
-    test "should end game", context do
-      {end_response, end_state} = Game.change_station(context.game, :compton)
-      assert end_response          === :game_over
-      assert end_state.rules.state === :game_over
     end
   end
 
@@ -131,6 +113,13 @@ defmodule GameTest do
 
     test "should impose turns penalty", context do
       assert context.state.rules.turns_left > context.test_state.rules.turns_left
+    end
+
+    test "should accrue debt for lost turns", context do
+      turns_lost = context.state.rules.turns_left - context.test_state.rules.turns_left
+      base_debt = context.state.player.debt
+      expected_debt = base_debt * :math.pow(1.15, turns_lost) |> round()
+      assert context.test_state.player.debt === expected_debt
     end
 
     test "should restore in_game state", context do
@@ -176,8 +165,8 @@ defmodule GameTest do
       %{game: context.game, state: :sys.get_state(context.game)}
     end
 
-    defp navigate_to_compton(context) do
-      Game.change_station(context.game, :compton)
+    defp navigate_to_hollywood(context) do
+      Game.change_station(context.game, :hollywood)
       %{game: context.game, test_state: :sys.get_state(context.game)}
     end
 
@@ -217,12 +206,6 @@ defmodule GameTest do
       :sys.replace_state(context.game, fn _state -> %{context.state | player: armed_player} end)
 
       %{game: context.game, state: :sys.get_state(context.game)}
-    end
-
-    defp zero_turns(context) do
-      rules = %Rules{context.state.rules | turns_left: 0}
-      state = :sys.replace_state(context.game, fn _state -> %{context.state | rules: rules} end)
-      %{game: context.game, test_state: state}
     end
 
     defp reduce_turns(context) do
