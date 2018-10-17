@@ -58,7 +58,7 @@ defmodule FutureButcherEngine.Player do
   .accrue_debt/2: player, turns
   """
   def accrue_debt(%Player{debt: debt} = player, turns) when debt > 0 do
-    accrued_debt = debt * :math.pow(1.15, turns) |> round()
+    accrued_debt = debt * :math.pow(1.05, turns) |> round()
     {:ok, %Player{player | debt: accrued_debt}}
   end
 
