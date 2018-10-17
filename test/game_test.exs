@@ -79,7 +79,8 @@ defmodule GameTest do
     end
 
     test "should decrement turns left", context do
-      assert context.state.rules.turns_left - context.test_state.rules.turns_left === 2
+      expected_turns = Station.get_travel_time(:hollywood)
+      assert context.state.rules.turns_left - context.test_state.rules.turns_left === expected_turns
     end
 
     test "should accrue player debt", context do

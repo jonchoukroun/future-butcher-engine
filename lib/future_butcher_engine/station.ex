@@ -7,22 +7,22 @@ defmodule FutureButcherEngine.Station do
   @stations %{
     :beverly_hills => %{
       :base_crime_rate => 1,
-      :travel_time     => 5,
+      :travel_time     => 3,
       :max_adjustment  => 0.5
       },
     :downtown => %{
       :base_crime_rate => 2,
-      :travel_time     => 4,
+      :travel_time     => 2,
       :max_adjustment  => 0.63
       },
     :venice_beach => %{
       :base_crime_rate => 3,
-      :travel_time     => 3,
+      :travel_time     => 2,
       :max_adjustment  => 0.75
       },
     :hollywood => %{
       :base_crime_rate => 4,
-      :travel_time     => 2,
+      :travel_time     => 1,
       :max_adjustment  => 0.88
       },
     :compton => %{
@@ -31,7 +31,7 @@ defmodule FutureButcherEngine.Station do
       :max_adjustment  => 1.0
       },
     :bell_gardens => %{
-      :travel_time => 1
+      :travel_time => 2
     }
   }
 
