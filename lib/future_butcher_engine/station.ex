@@ -7,22 +7,22 @@ defmodule FutureButcherEngine.Station do
   @stations %{
     :beverly_hills => %{
       :base_crime_rate => 1,
-      :travel_time     => 5,
+      :travel_time     => 3,
       :max_adjustment  => 0.5
       },
     :downtown => %{
       :base_crime_rate => 2,
-      :travel_time     => 4,
+      :travel_time     => 2,
       :max_adjustment  => 0.63
       },
     :venice_beach => %{
       :base_crime_rate => 3,
-      :travel_time     => 3,
+      :travel_time     => 2,
       :max_adjustment  => 0.75
       },
     :hollywood => %{
       :base_crime_rate => 4,
-      :travel_time     => 2,
+      :travel_time     => 1,
       :max_adjustment  => 0.88
       },
     :compton => %{
@@ -31,7 +31,7 @@ defmodule FutureButcherEngine.Station do
       :max_adjustment  => 1.0
       },
     :bell_gardens => %{
-      :travel_time => 1
+      :travel_time => 2
     }
   }
 
@@ -143,8 +143,8 @@ defmodule FutureButcherEngine.Station do
   defp get_min(:compton), do: 4
   defp get_min(:hollywood), do: 3
   defp get_min(:venice_beach), do: 2
-  defp get_min(:downtown), do: 2
-  defp get_min(_station), do: 0
+  defp get_min(:downtown), do: 1
+  defp get_min(:beverly_hills), do: 0
 
   defp get_max(cut, station) do
     round(Cut.maximum_quantity(cut) * get_max_adjustment(station))

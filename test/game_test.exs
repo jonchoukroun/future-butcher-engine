@@ -79,11 +79,12 @@ defmodule GameTest do
     end
 
     test "should decrement turns left", context do
-      assert context.state.rules.turns_left - context.test_state.rules.turns_left === 2
+      expected_turns = Station.get_travel_time(:hollywood)
+      assert context.state.rules.turns_left - context.test_state.rules.turns_left === expected_turns
     end
 
     test "should accrue player debt", context do
-      expected_debt = 5000 * :math.pow(1.15, Station.get_travel_time(:hollywood)) |> round()
+      expected_debt = 5000 * :math.pow(1.05, Station.get_travel_time(:hollywood)) |> round()
       assert context.test_state.player.debt === expected_debt
     end
 
@@ -118,7 +119,7 @@ defmodule GameTest do
     test "should accrue debt for lost turns", context do
       turns_lost = context.state.rules.turns_left - context.test_state.rules.turns_left
       base_debt = context.state.player.debt
-      expected_debt = base_debt * :math.pow(1.15, turns_lost) |> round()
+      expected_debt = base_debt * :math.pow(1.05, turns_lost) |> round()
       assert context.test_state.player.debt === expected_debt
     end
 
