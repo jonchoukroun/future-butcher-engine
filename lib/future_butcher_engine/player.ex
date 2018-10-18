@@ -58,7 +58,7 @@ defmodule FutureButcherEngine.Player do
   .accrue_debt/2: player, turns
   """
   def accrue_debt(%Player{debt: debt} = player, turns) when debt > 0 do
-    accrued_debt = debt * :math.pow(1.15, turns) |> round()
+    accrued_debt = debt * :math.pow(1.05, turns) |> round()
     {:ok, %Player{player | debt: accrued_debt}}
   end
 
@@ -163,7 +163,7 @@ defmodule FutureButcherEngine.Player do
   end
 
   def bribe_mugger(%Player{funds: funds} = player) when funds >= 500 do
-    loss = Enum.random(20..60) |> Kernel./(100) |> (fn n -> round(funds * n) end).()
+    loss = Enum.random(15..40) |> Kernel./(100) |> (fn n -> round(funds * n) end).()
     adjust_funds(player, :decrease, loss)
   end
 
