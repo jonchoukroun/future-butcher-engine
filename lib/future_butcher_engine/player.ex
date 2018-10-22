@@ -163,7 +163,7 @@ defmodule FutureButcherEngine.Player do
   end
 
   def bribe_mugger(%Player{funds: funds} = player) when funds >= 500 do
-    loss = Enum.random(15..40) |> Kernel./(100) |> (fn n -> round(funds * n) end).()
+    loss = Enum.random(10..30) |> Kernel./(100) |> (fn n -> round(funds * n) end).()
     adjust_funds(player, :decrease, loss)
   end
 
