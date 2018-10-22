@@ -234,8 +234,8 @@ defmodule FutureButcherEngine.PlayerTest do
       assert test_player.funds < context.player.funds
 
       loss = context.player.funds - test_player.funds
-      assert loss / context.player.funds <= 0.6
-      assert loss / context.player.funds >= 0.2
+      assert loss / context.player.funds <= 0.3
+      assert loss / context.player.funds >= 0.1
     end
   end
 

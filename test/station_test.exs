@@ -74,11 +74,11 @@ defmodule FutureButcherEngine.StationTest do
   describe ".calculate_mugging_probability" do
 
     test "at compton with default pack should return P(m) = 0.4" do
-      assert Station.calculate_mugging_probability(20, 20, :compton) === 0.45
+      assert Station.calculate_mugging_probability(20, 20, :compton) === 0.40
     end
 
     test "at compton with additional pack space should return P(m) = 0.6" do
-      assert Station.calculate_mugging_probability(40, 20, :compton) === 0.65
+      assert Station.calculate_mugging_probability(40, 20, :compton) === 0.63
     end
 
     test "should return 3-digit float" do
