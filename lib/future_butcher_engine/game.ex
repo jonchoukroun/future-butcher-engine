@@ -202,7 +202,7 @@ defmodule FutureButcherEngine.Game do
     with        {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
       {:ok, player, outcome} <- Player.fight_mugger(state_data.player),
         {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left, outcome),
-               {:ok, player} <- Player.accrue_debt(state_data.player, turns_penalty)
+               {:ok, player} <- Player.accrue_debt(player, turns_penalty)
     do
       state_data
       |> update_player(player)
