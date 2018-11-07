@@ -1,11 +1,11 @@
 defmodule FutureButcherEngine.Weapon do
 
   @weapons %{
-    :hockey_stick   => %{:damage => 10, :cuts => []},
-    :machete        => %{:damage => 9, :cuts => [:ribs, :liver, :flank]},
-    :hedge_clippers => %{:damage => 8, :cuts => [:ribs, :flank, :liver, :heart]},
-    :brass_knuckles => %{:damage => 7, :cuts => []},
-    :box_cutter     => %{:damage => 7, :cuts => [:brains, :heart, :liver, :flank]}
+    :hockey_stick   => %{:damage => 8, :cuts => []},
+    :machete        => %{:damage => 7, :cuts => [:ribs, :liver, :flank]},
+    :hedge_clippers => %{:damage => 6, :cuts => [:ribs, :flank, :liver, :heart]},
+    :brass_knuckles => %{:damage => 6, :cuts => []},
+    :box_cutter     => %{:damage => 5, :cuts => [:brains, :heart, :liver, :flank]}
   }
 
   @weapons_list Map.keys(@weapons)
@@ -17,7 +17,7 @@ defmodule FutureButcherEngine.Weapon do
     |> Kernel.+(1)
     |> Kernel.*(get_damage(weapon))
     |> Kernel./(turns_left + 1)
-    |> Kernel.*(8000)
+    |> Kernel.*(10000)
     |> round()
   end
 
