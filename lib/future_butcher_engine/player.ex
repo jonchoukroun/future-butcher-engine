@@ -10,7 +10,7 @@ defmodule FutureButcherEngine.Player do
 
   @base_space   20
   @starter_loan 5000
-  @cut_keys     [:flank, :heart, :loin, :liver, :ribs]
+  @cut_keys     [:brains, :heart, :flank, :ribs, :liver]
   @weapon_type  [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
 
 

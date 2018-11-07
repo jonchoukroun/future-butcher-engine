@@ -15,6 +15,6 @@ defmodule CutTest do
   end
 
   test "Cut.new/2 with single arg returns error" do
-    assert Cut.new(:loin) == {:error, :missing_inputs}
+    assert Cut.new(:brains) == {:error, :missing_inputs}
   end
 end
