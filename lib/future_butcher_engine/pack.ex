@@ -17,7 +17,7 @@ defmodule FutureButcherEngine.Pack do
   def generate_price(pack, turns_left) when pack in @packs_list do
     get_pack_space(pack)
     |> Kernel./(turns_left + 1)
-    |> Kernel.*(1000)
+    |> Kernel.*(4500)
     |> round()
   end
   def generate_price(_pack, _turns_left), do: {:error, :invalid_pack_type}

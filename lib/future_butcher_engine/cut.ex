@@ -4,11 +4,11 @@ defmodule FutureButcherEngine.Cut do
   defstruct [:type, :price]
 
   @cut_values %{
-    :flank => %{:max => 20,  :slope => -450.0,  :price_intercept => 14_000},
-    :heart => %{:max => 10,  :slope => -1000.0, :price_intercept => 25_000},
-    :liver => %{:max => 100, :slope => -0.55,   :price_intercept => 65},
-    :loin  => %{:max => 45,  :slope => -17.0,   :price_intercept => 1300},
-    :ribs  => %{:max => 40,  :slope => -83.0,   :price_intercept => 3500}
+    :brains => %{:max => 10,  :slope => -7500.0, :price_intercept => 100_000},
+    :heart  => %{:max => 10,  :slope => -1000.0, :price_intercept => 25_000},
+    :flank  => %{:max => 20,  :slope => -450.0,  :price_intercept => 14_000},
+    :ribs   => %{:max => 40,  :slope => -83.0,   :price_intercept => 3500},
+    :liver  => %{:max => 40,  :slope => -83.0,   :price_intercept => 3500}
   }
 
   @cuts_list Map.keys(@cut_values)
@@ -33,9 +33,11 @@ defmodule FutureButcherEngine.Cut do
 
   def new(_), do: {:error, :missing_inputs}
 
+  defp calculate_price(:brains, 0), do: Enum.random(150_000..200_000)
   defp calculate_price(:heart, 0), do: Enum.random(50000..100000)
   defp calculate_price(:flank, 0), do: Enum.random(20000..40000)
   defp calculate_price(:ribs, 0), do: Enum.random(8000..18000)
+  defp calculate_price(:liver, 0), do: Enum.random(8000..18000)
   defp calculate_price(_type, 0), do: nil
 
   defp calculate_price(type, quantity) do
