@@ -10,7 +10,7 @@ defmodule FutureButcherEngine.Player do
 
   @base_space   20
   @starter_loan 5000
-  @cut_keys     [:flank, :heart, :loin, :liver, :ribs]
+  @cut_keys     [:brains, :heart, :flank, :ribs, :liver]
   @weapon_type  [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
 
 
@@ -152,7 +152,7 @@ defmodule FutureButcherEngine.Player do
   def fight_mugger(%Player{weapon: nil} = player), do: {:ok, player, :defeat}
 
   def fight_mugger(player) do
-    case Weapon.get_damage(player.weapon) <= Enum.random(1..10) do
+    case Weapon.get_damage(player.weapon) >= Enum.random(1..10) do
       true ->
         harvest = harvest_mugger(player)
         |> Enum.reduce(player.pack, fn cut, pack -> increase_cut(pack, cut, 1) end)
@@ -229,7 +229,7 @@ defmodule FutureButcherEngine.Player do
 
   defp harvest_mugger(player) do
     Weapon.get_cuts(player.weapon)
-    |> Enum.reject(fn _cut -> Enum.random(0..10) >= 4 end)
+    |> Enum.reject(fn _cut -> Enum.random(1..10) > 5 end)
     |> Enum.map_reduce(get_weight_carried(player), fn cut, acc ->
       {(if player.pack_space > acc, do: cut), (acc + 1)} end)
     |> elem(0)

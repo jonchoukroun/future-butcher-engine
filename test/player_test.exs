@@ -94,7 +94,7 @@ defmodule FutureButcherEngine.PlayerTest do
     setup [:initialize_player]
 
     test "with insufficient funds returns error", context do
-      assert Player.buy_cut(context.player, :loin, 4, 10_000) == {:error, :insufficient_funds}
+      assert Player.buy_cut(context.player, :brains, 4, 10_000) == {:error, :insufficient_funds}
     end
 
     test "with insufficient space returns error", context do
