@@ -2,6 +2,7 @@ defmodule FutureButcherEngine.Rules do
   alias __MODULE__
 
   @enforce_keys [:turns_left, :state]
+  @derive {Jason.Encoder, only: [:turns_left, :state]}
   defstruct [:turns_left, :state]
 
   def new(turns) when is_integer(turns) and turns > 0 do
