@@ -1,6 +1,7 @@
 defmodule FutureButcherEngine.Cut do
   alias __MODULE__
 
+  @derive {Jason.Encoder, only: [:type, :price]}
   defstruct [:type, :price]
 
   @cut_values %{

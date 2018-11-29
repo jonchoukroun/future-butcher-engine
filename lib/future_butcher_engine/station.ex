@@ -2,6 +2,7 @@ defmodule FutureButcherEngine.Station do
   alias FutureButcherEngine.{Cut, Station, Weapon, Pack}
 
   @enforce_keys [:station_name, :market, :store]
+  @derive {Jason.Encoder, only: [:station_name, :market, :store]}
   defstruct [:station_name, :market, :store]
 
   @stations %{

@@ -3,6 +3,7 @@ defmodule FutureButcherEngine.Game do
   alias FutureButcherEngine.{Player, Station, Rules}
 
   @enforce_keys [:player, :rules]
+  @derive {Jason.Encoder, only: [:player, :rules]}
   defstruct [:player, :rules]
 
   @stations [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton, :bell_gardens]

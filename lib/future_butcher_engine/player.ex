@@ -6,6 +6,7 @@ defmodule FutureButcherEngine.Player do
   alias FutureButcherEngine.{Player, Weapon}
 
   @enforce_keys [:player_name, :funds, :debt, :pack, :pack_space, :weapon]
+  @derive {Jason.Encoder, only: [:player_name, :funds, :debt, :pack, :pack_space, :weapon]}
   defstruct     [:player_name, :funds, :debt, :pack, :pack_space, :weapon]
 
   @base_space   20
