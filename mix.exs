@@ -6,6 +6,9 @@ defmodule FutureButcherEngine.Mixfile do
       app: :future_butcher_engine,
       version: "0.1.0",
       elixir: "~> 1.7.4",
+      description: description(),
+      package: package(),
+      source_url: "https://github.com/jonchoukroun/future-butcher-engine",
       start_permanent: Mix.env == :prod,
       deps: deps()
     ]
@@ -23,6 +26,17 @@ defmodule FutureButcherEngine.Mixfile do
   defp deps do
     [
       {:jason, "~> 1.1"}
+    ]
+  end
+
+  defp description do
+    "Game engine for Future Butcher."
+  end
+
+  defp package do
+    [
+      licenses: ["GNU GPLv3"],
+      links: %{"GitHub" => "https://github.com/jonchoukroun/future-butcher-engine"}
     ]
   end
 end
