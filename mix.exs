@@ -9,6 +9,7 @@ defmodule FutureButcherEngine.Mixfile do
       description: description(),
       package: package(),
       source_url: "https://github.com/jonchoukroun/future-butcher-engine",
+      homepage_url: "https://www.futurebutcher.com",
       start_permanent: Mix.env == :prod,
       deps: deps()
     ]
@@ -25,7 +26,8 @@ defmodule FutureButcherEngine.Mixfile do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:jason, "~> 1.1"}
+      {:jason, "~> 1.1"},
+      {:ex_doc, "~> 0.19", only: :dev, runtime: false}
     ]
   end
 
