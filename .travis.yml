@@ -1,0 +1,17 @@
+---
+language: elixir
+elixir:
+  - "1.7.4"
+otp_release:
+  - "21.1.4"
+
+sudo: false
+dist: trusty
+
+install:
+  - mix local.rebar --force
+  - mix local.hex --force
+  - mix deps.get
+
+script:
+  - mix test
