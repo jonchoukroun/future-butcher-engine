@@ -5,7 +5,7 @@ defmodule FutureButcherEngine.Mixfile do
     [
       app: :future_butcher_engine,
       version: "0.1.0",
-      elixir: "~> 1.7.4",
+      elixir: "~> 1.9.2",
       description: description(),
       package: package(),
       source_url: "https://github.com/jonchoukroun/future-butcher-engine",
