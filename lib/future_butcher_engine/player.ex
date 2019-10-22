@@ -1,25 +1,42 @@
 defmodule FutureButcherEngine.Player do
   @moduledoc """
   Player module handles buying/selling cuts, weapons; debt; muggings
+  Player modules creates player, handles buying/selling of cuts and weapons, debt management, and muggings.
   """
 
   alias FutureButcherEngine.{Player, Weapon}
 
   @enforce_keys [:player_name, :funds, :debt, :pack, :pack_space, :weapon]
   @derive {Jason.Encoder, only: [:player_name, :funds, :debt, :pack, :pack_space, :weapon]}
-  defstruct     [:player_name, :funds, :debt, :pack, :pack_space, :weapon]
+  defstruct [:player_name, :funds, :debt, :pack, :pack_space, :weapon]
 
-  @base_space   20
+  @base_space 20
   @starter_loan 5000
-  @cut_keys     [:brains, :heart, :flank, :ribs, :liver]
-  @weapon_type  [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
+  @cut_keys [:brains, :heart, :flank, :ribs, :liver]
+  @weapon_type [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
 
+  @type player :: %Player{player_name: String.t, funds: integer, debt: integer, pack: map, pack_space: integer, weapon: atom | nil}
 
   # New player ----------------------------------------------------------------
 
   @doc """
-  .new/1: player name
+  Returns a new Player struct with a starting values and an initialized pack.
+
+  Returns an error tuple if player_name is invalid.
+
+  ## Examples
+
+      iex > FutureButcherEnging.Player.new("bob")
+      %FutureButcherEngine.Player{
+        debt: 5000,
+        funds: 5000,
+        pack: %{brains: 0, flank: 0, heart: 0, liver: 0, ribs: 0},
+        pack_space: 20,
+        player_name: "bob",
+        weapon: nil}
+
   """
+  @spec new(String.t) :: player
   def new(player_name) when is_binary(player_name) do
     %Player{
       player_name: player_name,
@@ -31,7 +48,8 @@ defmodule FutureButcherEngine.Player do
     }
   end
 
-  def new(_name), do: {:error, :invalid_player_name}
+  def new(player_name) when not is_binary(player_name), do: {:error, :invalid_player_name}
+  def new(_player_name), do: {:error, :invalid_player_name}
 
   defp initialize_pack do
     Map.new(@cut_keys, fn cut -> {cut, 0} end)
@@ -41,8 +59,22 @@ defmodule FutureButcherEngine.Player do
   # Packs ----------------------------------------------------------------------
 
   @doc """
-  .buy_pack/3: player, space of new pack, cost of new pack
+  Returns an updated Player struct with increased pack size and reduced funds.
+
+  Returns an error tuple with insufficient funds or if pack size isn't greater.
+
+  ## Examples
+
+      iex > FutureButcherEngine.Player.buy_pack(%Player{funds: 5000, pack_space: 20, ...}, 30, 1000)
+      {:ok, FutureButcherEngine.Player%{funds: 4000, pack_space: 30, ...}}
+
+      iex > FutureButcherEngine.Player.buy_pack(%Player{funds: 1000, ...}, 30, 2000)
+      {:error, :insufficient_funds}
+
+      iex > FutureButcherEngine.Player.buy_pack(%Player{pack_space: 30, ...}, 20, 1000)
+      {:error, :must_upgrade_pack}
   """
+  @spec buy_pack(player, integer, integer) :: {atom, player}
   def buy_pack(%Player{funds: funds}, _, cost) when funds < cost, do: {:error, :insufficient_funds}
 
   def buy_pack(%Player{pack_space: current_space}, new_space, _cost)
@@ -56,8 +88,16 @@ defmodule FutureButcherEngine.Player do
   # Debt/Loans -----------------------------------------------------------------
 
   @doc """
-  .accrue_debt/2: player, turns
+  Returns an updated Player struct with a higher debt amount. Debt increases by 5% each turn.
+
+  Returns an unchanged Player struct when debt is 0.
+
+  ## Examples
+
+      iex > FutureButcherEngine.Player.accrue_debt(%Player{debt: 5000, ...}, 5)
+      {:ok, %FutureButcherEngine.Player{debt: 6381, ...}}
   """
+  @spec accrue_debt(player, integer) :: {atom, player}
   def accrue_debt(%Player{debt: debt} = player, turns) when debt > 0 do
     accrued_debt = debt * :math.pow(1.05, turns) |> round()
     {:ok, %Player{player | debt: accrued_debt}}
@@ -66,8 +106,16 @@ defmodule FutureButcherEngine.Player do
   def accrue_debt(player, _turns), do: {:ok, player}
 
   @doc """
-  .pay_debt/1: player
+  Returns an updated Player struct with zeroed-out debt and decreased funds.
+
+  Returns an error tupe with insufficient funds.
+
+  ## Examples
+
+      iex > FutureButcherEngine.Player.pay_debt(%Player{debt: 5000, funds: 7000 ...})
+      {:ok, %FutureButcherEngine.Player{debt: 0, funds: 2000, ...}}
   """
+  @spec pay_debt(player) :: {atom, player}
   def pay_debt(%Player{funds: f, debt: d}) when d > f, do: {:error, :insufficient_funds}
 
   def pay_debt(player) do
@@ -79,8 +127,16 @@ defmodule FutureButcherEngine.Player do
   # Buy/Sell Cuts --------------------------------------------------------------
 
   @doc """
-  .buy_cut/4: player, cut name, cut amount, cut cost
+  Returns an updated Player struct with reduced funds and an increased cut in the pack map.
+
+  Returns an error tuple with insufficient funds.
+
+  ## Examples
+
+      iex > FutureButcherEngine.Player.buy_cut(%Player{funds: 5000, pack: %{}, ...}, :heart, 5, 1000)
+      {:ok, %FutureButcherEngine.Player{funds: 4000, pack: %{heart: 5}, ...}}
   """
+  @spec buy_cut(player, atom, integer, integer) :: {atom, player}
   def buy_cut(%Player{funds: funds}, _cut, _amount, cost) when funds < cost do
     {:error, :insufficient_funds}
   end
@@ -94,6 +150,17 @@ defmodule FutureButcherEngine.Player do
     end
   end
 
+  @doc """
+  Returns an updated Player struct with increased funds and a reduced cut in the pack map.
+
+  Returns an error tuple with insufficient cuts.
+
+  ## Examples
+
+      iex > FutureButcherEngine.Player.sell_cut(%Player{funds: 5000, pack: %{heart: 5}, ...}, :heart, 3, 1000)
+      {:ok, %FutureButcherEngine.Player{funds: 5000, pack: %{heart: 2}, ...}}
+  """
+  @spec sell_cut(player, atom, integer, integer) :: {atom, player}
   def sell_cut(player, cut, amount, profit) do
     with {:ok} <- sufficient_cuts?(player.pack, cut, amount) do
       {:ok, player} = adjust_funds(player, :increase, profit)
