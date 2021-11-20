@@ -81,7 +81,7 @@ defmodule FutureButcherEngine.Station do
     {:ok, :end_transit}
   end
 
-  def random_encounter(pack_space, turns_left, station) do
+  def random_encounter(pack_space, _turns_left, station) do
     p = calculate_mugging_probability(pack_space, station)
 
     case :rand.uniform > p do
