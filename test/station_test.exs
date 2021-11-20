@@ -54,9 +54,10 @@ defmodule FutureButcherEngine.StationTest do
 
   describe ".random_encounter last turn" do
     test "should end transit" do
-      assert Station.random_encounter(20, 0, :beverly_bills) === {:ok, :end_transit}
-      assert Station.random_encounter(60, 0, :compton) === {:ok, :end_transit}
-      assert Station.random_encounter(20, 0, :bell_gardens) === {:ok, :end_transit}
+      packs = Enum.to_list(20..60//10)
+      for station <- FutureButcherEngine.Station.station_names(), pack <- packs do
+        assert Station.random_encounter(pack, 0, station) === {:ok, :end_transit}
+      end
     end
   end
 
@@ -72,20 +73,22 @@ defmodule FutureButcherEngine.StationTest do
   # Mugging probabilities ------------------------------------------------------
 
   describe ".calculate_mugging_probability" do
-
-    test "at compton with default pack should return P(m) = 0.4" do
-      assert Station.calculate_mugging_probability(20, 20, :compton) === 0.40
+    test "pack size should increase probability" do
+      packs = Enum.to_list(20..60//10)
+      for station <- Station.station_names() do
+        probabilities = packs
+          |> Enum.map(& Station.calculate_mugging_probability(&1, station))
+        assert Enum.sort(packs) === packs
+      end
     end
 
-    test "at compton with additional pack space should return P(m) = 0.6" do
-      assert Station.calculate_mugging_probability(40, 20, :compton) === 0.63
-    end
-
-    test "should return 3-digit float" do
-      assert is_float(Station.calculate_mugging_probability(20, 10, :beverly_hills))
-      assert is_float(Station.calculate_mugging_probability(20, 10, :venice_beach))
-      assert is_float(Station.calculate_mugging_probability(50, 2, :downtown))
-      assert is_float(Station.calculate_mugging_probability(30, 24, :hollywood))
+    test "should return a float" do
+      packs = Enum.to_list(20..60//10)
+      for station <- Station.station_names(), pack <- packs do
+        if station !== :bell_gardens do
+          assert is_float(Station.calculate_mugging_probability(pack, station))
+        end
+      end
     end
   end
 

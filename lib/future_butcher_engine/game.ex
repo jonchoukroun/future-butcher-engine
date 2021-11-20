@@ -180,12 +180,14 @@ defmodule FutureButcherEngine.Game do
   # Travel/transit -------------------------------------------------------------
 
   def handle_call({:change_station, destination}, _from, state_data) do
-    with       {:ok} <- valid_destination?(
-                        state_data.station.station_name, state_data.rules.turns_left, destination),
+    with {:ok} <- valid_destination?(
+        state_data.station.station_name, state_data.rules.turns_left, destination),
       {:ok, outcome} <- Station.random_encounter(
-                          state_data.player.pack_space, state_data.rules.turns_left, destination),
-        {:ok, rules} <- Rules.check(state_data.rules, outcome),
-       {:ok, player} <- Player.accrue_debt(state_data.player, Station.get_travel_time(destination))
+        state_data.player.pack_space,
+        state_data.rules.turns_left - Station.get_travel_time(destination),
+        destination),
+      {:ok, rules} <- Rules.check(state_data.rules, outcome),
+      {:ok, player} <- Player.accrue_debt(state_data.player, Station.get_travel_time(destination))
     do
       state_data
       |> update_rules(decrement_turns(rules, Station.get_travel_time(destination)))

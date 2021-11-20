@@ -43,7 +43,7 @@ defmodule FutureButcherEngine.Station do
   def get_base_crime_rate(:bell_gardens), do: {:error, :invalid_station}
 
   def get_base_crime_rate(station) when station in @station_names do
-    @stations[station].base_crime_rate
+    @stations[station].base_crime_rate / 40
   end
   def get_base_crime_rate(_station), do: {:error, :invalid_station}
 
@@ -77,12 +77,12 @@ defmodule FutureButcherEngine.Station do
 
   def random_encounter(_pack_space, _turns_left, :bell_gardens), do: {:ok, :end_transit}
 
-  def random_encounter(_pack_space, turns_left, _station) when turns_left <= 1 do
+  def random_encounter(_pack_space, turns_left, _station) when turns_left === 0 do
     {:ok, :end_transit}
   end
 
   def random_encounter(pack_space, turns_left, station) do
-    p = calculate_mugging_probability(pack_space, turns_left, station)
+    p = calculate_mugging_probability(pack_space, station)
 
     case :rand.uniform > p do
       true  -> {:ok, :end_transit}
@@ -90,17 +90,12 @@ defmodule FutureButcherEngine.Station do
     end
   end
 
-  def calculate_mugging_probability(20, _turns_left, :compton), do: 0.40
-  def calculate_mugging_probability(_pack_space, _turns_left, :compton), do: 0.63
+  def calculate_mugging_probability(_, :bell_gardens), do: 0
 
-  def calculate_mugging_probability(pack_space, turns_left, station) do
-    base_crime_rate = get_base_crime_rate(station)
-    current_turn    = 25 - turns_left
-    visibility      = if pack_space === 20, do: 0.0, else: 0.1
-
-    :math.sin((current_turn + base_crime_rate) / 40)
-    |> :math.pow(6 - base_crime_rate)
-    |> Kernel.+(visibility)
+  def calculate_mugging_probability(pack_space, station) do
+    pack_adjustment = (pack_space - 20) / 400
+    get_base_crime_rate(station)
+    |> Kernel.+(pack_adjustment)
     |> Float.round(3)
   end
 
