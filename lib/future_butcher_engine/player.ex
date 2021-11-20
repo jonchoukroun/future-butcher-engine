@@ -230,7 +230,7 @@ defmodule FutureButcherEngine.Player do
   @doc """
   Returns an updated Player struct with no weapon, or returns an error tuple if no weapon is owned.
   """
-  @spec drop_weapon(player) :: {:ok, player} | {:error, atom} 
+  @spec drop_weapon(player) :: {:ok, player} | {:error, atom}
   def drop_weapon(%Player{weapon: nil}), do: {:error, :no_weapon_owned}
   def drop_weapon(player), do: {:ok, player |> Map.replace!(:weapon, nil)}
 
