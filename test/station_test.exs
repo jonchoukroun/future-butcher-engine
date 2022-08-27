@@ -76,8 +76,7 @@ defmodule FutureButcherEngine.StationTest do
     test "pack size should increase probability" do
       packs = Enum.to_list(20..60//10)
       for station <- Station.station_names() do
-        probabilities = packs
-          |> Enum.map(& Station.calculate_mugging_probability(&1, station))
+        Enum.map(packs, & Station.calculate_mugging_probability(&1, station))
         assert Enum.sort(packs) === packs
       end
     end

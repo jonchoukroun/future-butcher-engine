@@ -201,14 +201,16 @@ defmodule FutureButcherEngine.Game do
     end
   end
 
+  # Handles running from mugger option when player has no weapon
   def handle_call({:fight_mugger}, _from, state_data) do
     with        {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
       {:ok, player, outcome} <- Player.fight_mugger(state_data.player),
-        {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left, outcome),
-               {:ok, player} <- Player.accrue_debt(player, turns_penalty)
+        {:ok, turns_penalty} <- generate_turns_penalty(outcome),
+               {:ok, penalized_player} <- penalize_assets(player, outcome),
+               {:ok, final_player} <- Player.accrue_debt(penalized_player, turns_penalty)
     do
       state_data
-      |> update_player(player)
+      |> update_player(final_player)
       |> update_rules(decrement_turns(rules, turns_penalty))
       |> reply_success(:ok)
     else
@@ -329,15 +331,13 @@ defmodule FutureButcherEngine.Game do
 
   # Computations ===============================================================
 
-  defp generate_turns_penalty(_turns_left, :victory), do: {:ok, 0}
+  defp generate_turns_penalty(:victory), do: {:ok, 0}
 
-  defp generate_turns_penalty(1, :defeat), do: {:ok, 1}
+  defp generate_turns_penalty(:defeat), do: {:ok, 1}
 
-  defp generate_turns_penalty(turns_left, :defeat) do
-    {:ok, Enum.random(1..Enum.min([turns_left, 4]))}
-  end
+  defp penalize_assets(player, :victory), do: {:ok, player}
 
-  defp generate_turns_penalty(_turns_left, _outcome), do: {:error, :invalid_outcome}
+  defp penalize_assets(player, :defeat), do: Player.bribe_mugger(player)
 
   defp get_pack_details(store, pack) do
     if Map.get(store, pack) do

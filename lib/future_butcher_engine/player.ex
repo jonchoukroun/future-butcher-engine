@@ -238,7 +238,8 @@ defmodule FutureButcherEngine.Player do
   # Muggings -------------------------------------------------------------------
 
   @doc """
-  Returns an updated Player struct adjusted on the outcome of the fight.
+  Returns an updated Player struct adjusted on the outcome of the fight. When
+  the player has no weapon, they have a 20% chance of successfully running.
 
     ## Examples
 
@@ -249,7 +250,13 @@ defmodule FutureButcherEngine.Player do
         {:ok, %FutureButcherEngine.Player{pack: %{heart: 2}}, :victory}
   """
   @spec fight_mugger(player) :: {:ok, player, outcome :: atom}
-  def fight_mugger(%Player{weapon: nil} = player), do: {:ok, player, :defeat}
+  def fight_mugger(%Player{weapon: nil} = player) do
+    if get_run_outcome() >= 8 do
+      {:ok, player, :victory}
+    else
+      {:ok, player, :defeat}
+    end
+  end
 
   def fight_mugger(player) do
     case Weapon.get_damage(player.weapon) >= Enum.random(1..10) do
@@ -263,7 +270,7 @@ defmodule FutureButcherEngine.Player do
   end
 
   @doc """
-  Returns an adjusted Player struct with either funds reduced by 10 to 30% if player funds exceed $500, or
+  Returns an adjusted Player struct with either funds reduced by 10% to 30% if player funds exceed $500, or
   an owned cut zeroed out.
 
   Returns an error tuple if player funds are under $500 and no cuts are owned.
@@ -346,7 +353,6 @@ defmodule FutureButcherEngine.Player do
 
   # Property updates -----------------------------------------------------------
 
-
   defp harvest_mugger(player) do
     Weapon.get_cuts(player.weapon)
     |> Enum.reject(fn _cut -> Enum.random(1..10) > 5 end)
@@ -372,4 +378,7 @@ defmodule FutureButcherEngine.Player do
     player |> Map.put(attribute, Map.get(player, attribute) - amount)
   end
 
+
+  # Computations ===============================================================
+  defp get_run_outcome(), do: Enum.random(0..9)
 end

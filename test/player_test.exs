@@ -198,8 +198,14 @@ defmodule FutureButcherEngine.PlayerTest do
   describe ".fight_mugger with no weapon" do
     setup [:initialize_player]
 
-    test "should return defeat", context do
-      assert Player.fight_mugger(context.player) === {:ok, context.player, :defeat}
+    test "should return victory on rand values 8 and higher, or defeat", context do
+      # Will result in Enum.random(1..9) to return 8 then 7
+      :rand.seed(:exsplus, {1, 2, 1})
+      outcomes = for _ <- 1..2 do
+        {:ok, _, outcome} = Player.fight_mugger(context.player)
+        outcome
+      end
+      assert outcomes === [:defeat, :victory]
     end
   end
 
