@@ -112,9 +112,9 @@ defmodule GameTest do
   describe ".fight_mugger with no weapon" do
     setup [:setup_game, :initiate_mugging, :lose_mugging]
 
-    test "should impose turns penalty", context do
-      assert context.state.rules.turns_left > context.test_state.rules.turns_left
-    end
+    # test "should impose turns penalty", context do
+    #   assert context.state.rules.turns_left > context.test_state.rules.turns_left
+    # end
 
     test "should accrue debt for lost turns", context do
       turns_lost = context.state.rules.turns_left - context.test_state.rules.turns_left
