@@ -77,6 +77,10 @@ defmodule FutureButcherEngine.Station do
 
   def random_encounter(_pack_space, _turns_left, :bell_gardens), do: {:ok, :end_transit}
 
+  def random_encounter(_pack_space, turns_left, _station) when turns_left > 22 do
+    {:ok, :end_transit}
+  end
+
   def random_encounter(_pack_space, turns_left, _station) when turns_left === 0 do
     {:ok, :end_transit}
   end
