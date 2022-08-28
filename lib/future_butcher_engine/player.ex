@@ -1,26 +1,39 @@
 defmodule FutureButcherEngine.Player do
   @moduledoc """
-  Player module handles buying/selling cuts, weapons; debt; muggings
-  Player modules creates player, handles buying/selling of cuts and weapons, debt management, and muggings.
+  Player modules creates player, handles buying/selling of cuts and weapons, debt and health management, and muggings.
   """
 
   alias FutureButcherEngine.{Player, Weapon}
 
-  @enforce_keys [:player_name, :cash, :debt, :pack, :pack_space, :weapon]
-  @derive {Jason.Encoder, only: [:player_name, :cash, :debt, :pack, :pack_space, :weapon]}
-  defstruct [:player_name, :cash, :debt, :pack, :pack_space, :weapon]
+  @enforce_keys [:player_name, :cash, :debt, :health, :pack, :pack_space, :weapon]
+  @derive {
+    Jason.Encoder, only: [
+      :player_name, :cash, :debt, :health, :pack, :pack_space, :weapon
+    ]
+  }
+  defstruct [:player_name, :cash, :debt, :health, :pack, :pack_space, :weapon]
 
   @base_space 20
   @starter_loan 5000
+  @full_health 100
+  @clinic_cost 20_000
   @cut_keys [:brains, :heart, :flank, :ribs, :liver]
   @weapon_type [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
 
-  @type player :: %Player{player_name: String.t, cash: integer, debt: integer, pack: map, pack_space: integer, weapon: atom | nil}
+  @type player :: %Player{
+    player_name: String.t,
+    cash: integer,
+    debt: integer,
+    health: integer,
+    pack: map,
+    pack_space: integer,
+    weapon: atom | nil
+  }
 
   # New player ----------------------------------------------------------------
 
   @doc """
-  Returns a new Player struct with a starting values and an initialized pack.
+  Returns a new Player struct with starting values and an initialized pack.
 
   Returns an error tuple if `player_name` is invalid.
 
@@ -28,23 +41,26 @@ defmodule FutureButcherEngine.Player do
 
       iex > FutureButcherEnging.Player.new("bob")
       %FutureButcherEngine.Player{
-        debt: 5000,
         cash: 5000,
+        debt: 5000,
+        health: 100,
         pack: %{brains: 0, flank: 0, heart: 0, liver: 0, ribs: 0},
         pack_space: 20,
         player_name: "bob",
-        weapon: nil}
+        weapon: nil
+      }
 
   """
   @spec new(player_name :: String.t) :: player | {:error, atom}
   def new(player_name) when is_binary(player_name) do
     %Player{
+      cash: @starter_loan,
+      debt: @starter_loan,
+      health: @full_health,
+      pack: initialize_pack(),
+      pack_space: @base_space,
       player_name: player_name,
-      cash:       @starter_loan,
-      debt:        @starter_loan,
-      pack:        initialize_pack(),
-      pack_space:  @base_space,
-      weapon:      nil
+      weapon: nil
     }
   end
 
@@ -56,6 +72,23 @@ defmodule FutureButcherEngine.Player do
   end
 
 
+  # Health ---------------------------------------------------------------------
+
+  @doc """
+  Returns an updated Player struct with the health field decreased by the
+  passed-in amount.
+
+  ## Examples
+
+      iex > FutureButcherEngine.Player.decrease_health(%Player{health: 20}, 30)
+      {:ok, FutureButcherEngine.Player%{health: -10, ...}}
+  """
+  @spec decrease_health(player, amount :: integer) :: {:ok, player} | {:error, atom}
+  def decrease_health(_player), do: {:error, :missing_damage_amount}
+  def decrease_health(player, amount) when amount == 0, do: {:ok, player}
+  def decrease_health(%Player{health: health} = player, amount) do
+    {:ok, %Player{player | health: health - amount}}
+  end
   # Packs ----------------------------------------------------------------------
 
   @doc """
@@ -239,7 +272,8 @@ defmodule FutureButcherEngine.Player do
 
   @doc """
   Returns an updated Player struct adjusted on the outcome of the fight. When
-  the player has no weapon, they have a 20% chance of successfully running.
+  the player has no weapon, they have a 20% chance of successfully running. If the
+  player's health drops to 0 or below, will return a game-ending outcome.
 
     ## Examples
 
@@ -248,13 +282,21 @@ defmodule FutureButcherEngine.Player do
 
         iex > FutureButcherEngine.Player.fight_mugger(%Player{pack: %{heart: 1, ...}, weapon: :machete, ...})
         {:ok, %FutureButcherEngine.Player{pack: %{heart: 2}}, :victory}
+
+        iex > FutureButcherEngine.Player.fight_mugger(%Player{health: 20})
+        {:ok, %FutureButcherEngine.Player{health: -10}, :death}
   """
   @spec fight_mugger(player) :: {:ok, player, outcome :: atom}
   def fight_mugger(%Player{weapon: nil} = player) do
     if get_run_outcome() >= 8 do
       {:ok, player, :victory}
     else
-      {:ok, player, :defeat}
+      {:ok, damaged_player} = Player.decrease_health(player, get_damage())
+      if (damaged_player.health > 0) do
+        {:ok, damaged_player, :defeat}
+      else
+        {:ok, damaged_player, :death}
+      end
     end
   end
 
@@ -381,4 +423,6 @@ defmodule FutureButcherEngine.Player do
 
   # Computations ===============================================================
   defp get_run_outcome(), do: Enum.random(0..9)
+
+  defp get_damage(), do: Enum.random(10..30)
 end

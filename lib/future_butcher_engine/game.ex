@@ -209,10 +209,17 @@ defmodule FutureButcherEngine.Game do
                {:ok, penalized_player} <- penalize_assets(player, outcome),
                {:ok, final_player} <- Player.accrue_debt(penalized_player, turns_penalty)
     do
-      state_data
-      |> update_player(final_player)
-      |> update_rules(decrement_turns(rules, turns_penalty))
-      |> reply_success(:ok)
+      if outcome == :death do
+        state_data
+        |> update_player(player)
+        |> update_rules(%Rules{turns_left: 0, state: :game_over})
+        |> reply_success(:game_over)
+      else
+        state_data
+        |> update_player(final_player)
+        |> update_rules(decrement_turns(rules, turns_penalty))
+        |> reply_success(:ok)
+      end
     else
       {:error, msg} -> reply_failure(state_data, msg)
     end
@@ -331,12 +338,12 @@ defmodule FutureButcherEngine.Game do
 
   # Computations ===============================================================
 
+  defp generate_turns_penalty(:death), do: {:ok, 0}
   defp generate_turns_penalty(:victory), do: {:ok, 0}
-
   defp generate_turns_penalty(:defeat), do: {:ok, 1}
 
+  defp penalize_assets(player ,:death), do: {:ok, player}
   defp penalize_assets(player, :victory), do: {:ok, player}
-
   defp penalize_assets(player, :defeat), do: Player.bribe_mugger(player)
 
   defp get_pack_details(store, pack) do
