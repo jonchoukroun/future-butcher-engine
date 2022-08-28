@@ -6,16 +6,16 @@ defmodule FutureButcherEngine.Player do
 
   alias FutureButcherEngine.{Player, Weapon}
 
-  @enforce_keys [:player_name, :funds, :debt, :pack, :pack_space, :weapon]
-  @derive {Jason.Encoder, only: [:player_name, :funds, :debt, :pack, :pack_space, :weapon]}
-  defstruct [:player_name, :funds, :debt, :pack, :pack_space, :weapon]
+  @enforce_keys [:player_name, :cash, :debt, :pack, :pack_space, :weapon]
+  @derive {Jason.Encoder, only: [:player_name, :cash, :debt, :pack, :pack_space, :weapon]}
+  defstruct [:player_name, :cash, :debt, :pack, :pack_space, :weapon]
 
   @base_space 20
   @starter_loan 5000
   @cut_keys [:brains, :heart, :flank, :ribs, :liver]
   @weapon_type [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
 
-  @type player :: %Player{player_name: String.t, funds: integer, debt: integer, pack: map, pack_space: integer, weapon: atom | nil}
+  @type player :: %Player{player_name: String.t, cash: integer, debt: integer, pack: map, pack_space: integer, weapon: atom | nil}
 
   # New player ----------------------------------------------------------------
 
@@ -29,7 +29,7 @@ defmodule FutureButcherEngine.Player do
       iex > FutureButcherEnging.Player.new("bob")
       %FutureButcherEngine.Player{
         debt: 5000,
-        funds: 5000,
+        cash: 5000,
         pack: %{brains: 0, flank: 0, heart: 0, liver: 0, ribs: 0},
         pack_space: 20,
         player_name: "bob",
@@ -40,7 +40,7 @@ defmodule FutureButcherEngine.Player do
   def new(player_name) when is_binary(player_name) do
     %Player{
       player_name: player_name,
-      funds:       @starter_loan,
+      cash:       @starter_loan,
       debt:        @starter_loan,
       pack:        initialize_pack(),
       pack_space:  @base_space,
@@ -59,30 +59,30 @@ defmodule FutureButcherEngine.Player do
   # Packs ----------------------------------------------------------------------
 
   @doc """
-  Returns an updated Player struct with increased pack size and reduced funds.
+  Returns an updated Player struct with increased pack size and reduced cash.
 
-  Returns an error tuple if either the pack cost is greater than player funds, or
+  Returns an error tuple if either the pack cost is greater than player cash, or
   the new pack size is not greater than the current pack size.
 
   ## Examples
 
-      iex > FutureButcherEngine.Player.buy_pack(%Player{funds: 5000, pack_space: 20, ...}, 30, 1000)
-      {:ok, FutureButcherEngine.Player%{funds: 4000, pack_space: 30, ...}}
+      iex > FutureButcherEngine.Player.buy_pack(%Player{cash: 5000, pack_space: 20, ...}, 30, 1000)
+      {:ok, FutureButcherEngine.Player%{cash: 4000, pack_space: 30, ...}}
 
-      iex > FutureButcherEngine.Player.buy_pack(%Player{funds: 1000, ...}, 30, 2000)
-      {:error, :insufficient_funds}
+      iex > FutureButcherEngine.Player.buy_pack(%Player{cash: 1000, ...}, 30, 2000)
+      {:error, :insufficient_cash}
 
       iex > FutureButcherEngine.Player.buy_pack(%Player{pack_space: 30, ...}, 20, 1000)
       {:error, :must_upgrade_pack}
   """
-  @spec buy_pack(player, funds :: integer, cost :: integer) :: {:ok, player} | {:error, atom}
-  def buy_pack(%Player{funds: funds}, _, cost) when funds < cost, do: {:error, :insufficient_funds}
+  @spec buy_pack(player, cash :: integer, cost :: integer) :: {:ok, player} | {:error, atom}
+  def buy_pack(%Player{cash: cash}, _, cost) when cash < cost, do: {:error, :insufficient_cash}
 
   def buy_pack(%Player{pack_space: current_space}, new_space, _cost)
   when current_space >= new_space, do: {:error, :must_upgrade_pack}
 
   def buy_pack(player, pack_space, cost) do
-    adjust_funds(Map.put(player, :pack_space, pack_space), :decrease, cost)
+    adjust_cash(Map.put(player, :pack_space, pack_space), :decrease, cost)
   end
 
 
@@ -107,20 +107,20 @@ defmodule FutureButcherEngine.Player do
   def accrue_debt(player, _turns), do: {:ok, player}
 
   @doc """
-  Returns an updated Player struct with zeroed-out debt and decreased funds.
+  Returns an updated Player struct with zeroed-out debt and decreased cash.
 
-  Returns an error tuple if the debt amount to repay is greater than player funds.
+  Returns an error tuple if the debt amount to repay is greater than player cash.
 
   ## Examples
 
-      iex > FutureButcherEngine.Player.pay_debt(%Player{debt: 5000, funds: 7000 ...})
-      {:ok, %FutureButcherEngine.Player{debt: 0, funds: 2000, ...}}
+      iex > FutureButcherEngine.Player.pay_debt(%Player{debt: 5000, cash: 7000 ...})
+      {:ok, %FutureButcherEngine.Player{debt: 0, cash: 2000, ...}}
   """
   @spec pay_debt(player) :: {:ok, player} | {:error, atom}
-  def pay_debt(%Player{funds: f, debt: d}) when d > f, do: {:error, :insufficient_funds}
+  def pay_debt(%Player{cash: f, debt: d}) when d > f, do: {:error, :insufficient_cash}
 
   def pay_debt(player) do
-    {:ok, paid_player} = adjust_funds(player, :decrease, player.debt)
+    {:ok, paid_player} = adjust_cash(player, :decrease, player.debt)
     {:ok, %Player{paid_player | debt: 0}}
   end
 
@@ -128,23 +128,23 @@ defmodule FutureButcherEngine.Player do
   # Buy/Sell Cuts --------------------------------------------------------------
 
   @doc """
-  Returns an updated Player struct with reduced funds and an increased cut in the pack map.
+  Returns an updated Player struct with reduced cash and an increased cut in the pack map.
 
-  Returns an error tuple if the buy cost is greater than player funds.
+  Returns an error tuple if the buy cost is greater than player cash.
 
   ## Examples
 
-      iex > FutureButcherEngine.Player.buy_cut(%Player{funds: 5000, pack: %{}, ...}, :heart, 5, 1000)
-      {:ok, %FutureButcherEngine.Player{funds: 4000, pack: %{heart: 5}, ...}}
+      iex > FutureButcherEngine.Player.buy_cut(%Player{cash: 5000, pack: %{}, ...}, :heart, 5, 1000)
+      {:ok, %FutureButcherEngine.Player{cash: 4000, pack: %{heart: 5}, ...}}
   """
   @spec buy_cut(player, cut :: atom, amount :: integer, cost :: integer) :: {:ok, player} | {:error, atom}
-  def buy_cut(%Player{funds: funds}, _cut, _amount, cost) when funds < cost do
-    {:error, :insufficient_funds}
+  def buy_cut(%Player{cash: cash}, _cut, _amount, cost) when cash < cost do
+    {:error, :insufficient_cash}
   end
 
   def buy_cut(player, cut, amount, cost) do
     with {:ok} <- sufficient_space?(player, amount) do
-      {:ok, player} = adjust_funds(player, :decrease, cost)
+      {:ok, player} = adjust_cash(player, :decrease, cost)
       {:ok, player |> Map.put(:pack, increase_cut(player.pack, cut, amount))}
     else
       {:error, msg} -> {:error, msg}
@@ -152,19 +152,19 @@ defmodule FutureButcherEngine.Player do
   end
 
   @doc """
-  Returns an updated Player struct with increased funds and a reduced cut in the pack map.
+  Returns an updated Player struct with increased cash and a reduced cut in the pack map.
 
   Returns an error tuple if the sell amount is greater than the cut owned.
 
   ## Examples
 
-      iex > FutureButcherEngine.Player.sell_cut(%Player{funds: 5000, pack: %{heart: 5}, ...}, :heart, 3, 1000)
-      {:ok, %FutureButcherEngine.Player{funds: 5000, pack: %{heart: 2}, ...}}
+      iex > FutureButcherEngine.Player.sell_cut(%Player{cash: 5000, pack: %{heart: 5}, ...}, :heart, 3, 1000)
+      {:ok, %FutureButcherEngine.Player{cash: 5000, pack: %{heart: 2}, ...}}
   """
   @spec sell_cut(player, cut :: atom, amount :: integer, profit :: integer) :: {:ok, player} | {:error, atom}
   def sell_cut(player, cut, amount, profit) do
     with {:ok} <- sufficient_cuts?(player.pack, cut, amount) do
-      {:ok, player} = adjust_funds(player, :increase, profit)
+      {:ok, player} = adjust_cash(player, :increase, profit)
       {:ok, player |> Map.put(:pack, decrease_cut(player.pack, cut, amount))}
     else
       {:error, msg} -> {:error, msg}
@@ -175,32 +175,32 @@ defmodule FutureButcherEngine.Player do
   # Weapons --------------------------------------------------------------------
 
   @doc """
-  Returns an updated Player struct with a new weapon and adjusted funds.
+  Returns an updated Player struct with a new weapon and adjusted cash.
 
-  Returns an error tuple if weapon cost is greater than player funds, or player already owns weapon.
+  Returns an error tuple if weapon cost is greater than player cash, or player already owns weapon.
 
   ## Examples
 
-      iex > FutureButcherEngine.Player.buy_weapon(%Player{funds: 5000, weapon: nil, ...}, :axe, 1000)
-      {:ok, %FutureButcherEngine.Player{funds: 4000, weapon: :axe, ...}}
+      iex > FutureButcherEngine.Player.buy_weapon(%Player{cash: 5000, weapon: nil, ...}, :axe, 1000)
+      {:ok, %FutureButcherEngine.Player{cash: 4000, weapon: :axe, ...}}
 
-      iex > FutureButcherEngine.Player.buy_weapon(%Player{funds: 5000, weapon: :knife, ...}, :axe, 1000)
+      iex > FutureButcherEngine.Player.buy_weapon(%Player{cash: 5000, weapon: :knife, ...}, :axe, 1000)
       {:error, :already_owns_weapon}
 
-      iex > FutureButcherEngine.Player.buy_weapon(%Player{funds: 1000, weapon: nil, ...}, :axe, 2000)
-      {:error, :insufficient_funds}
+      iex > FutureButcherEngine.Player.buy_weapon(%Player{cash: 1000, weapon: nil, ...}, :axe, 2000)
+      {:error, :insufficient_cash}
   """
   @spec buy_weapon(player, weapon :: atom, cost :: integer) :: {:ok, player} | {:error, atom}
   def buy_weapon(%Player{weapon: weapon}, _weapon, _cost) when not is_nil(weapon) do
     {:error, :already_owns_weapon}
   end
 
-  def buy_weapon(%Player{funds: funds}, _weapon, cost) when funds < cost do
-    {:error, :insufficient_funds}
+  def buy_weapon(%Player{cash: cash}, _weapon, cost) when cash < cost do
+    {:error, :insufficient_cash}
   end
 
   def buy_weapon(player, weapon, cost) when weapon in @weapon_type do
-    {:ok, player} = adjust_funds(player, :decrease, cost)
+    {:ok, player} = adjust_cash(player, :decrease, cost)
     {:ok, player |> Map.put(:weapon, weapon)}
   end
 
@@ -208,22 +208,22 @@ defmodule FutureButcherEngine.Player do
 
 
   @doc """
-  Returns an updated Player struct with a different weapon and adjusted funds.
+  Returns an updated Player struct with a different weapon and adjusted cash.
   """
   @spec replace_weapon(player, weapon :: atom, cost :: integer, value :: integer) :: {:ok, player} | {:error, atom}
   def replace_weapon(%Player{weapon: weapon}, _weapon, _cost, _value) when is_nil(weapon) do
     {:error, :no_weapon_owned}
   end
 
-  def replace_weapon(%Player{funds: funds}, _weapon, cost, value)
-  when Kernel.+(funds, value) < cost, do: {:error, :insufficient_funds}
+  def replace_weapon(%Player{cash: cash}, _weapon, cost, value)
+  when Kernel.+(cash, value) < cost, do: {:error, :insufficient_cash}
 
   def replace_weapon(%Player{weapon: current_weapon}, weapon, _cost, _value)
   when current_weapon == weapon, do: {:error, :same_weapon_type}
 
   def replace_weapon(player, weapon, cost, value) do
-    {:ok, player} = adjust_funds(player, :increase, value)
-    {:ok, player} = adjust_funds(player, :decrease, cost)
+    {:ok, player} = adjust_cash(player, :increase, value)
+    {:ok, player} = adjust_cash(player, :decrease, cost)
     {:ok, player |> Map.replace!(:weapon, weapon)}
   end
 
@@ -270,15 +270,15 @@ defmodule FutureButcherEngine.Player do
   end
 
   @doc """
-  Returns an adjusted Player struct with either funds reduced by 10% to 30% if player funds exceed $500, or
+  Returns an adjusted Player struct with either cash reduced by 10% to 30% if player cash exceed $500, or
   an owned cut zeroed out.
 
-  Returns an error tuple if player funds are under $500 and no cuts are owned.
+  Returns an error tuple if player cash are under $500 and no cuts are owned.
   """
   @spec bribe_mugger(player) :: {:ok, player} | {:error, atom}
-  def bribe_mugger(%Player{funds: funds} = player) when funds >= 500 do
-    loss = Enum.random(10..30) |> Kernel./(100) |> (fn n -> round(funds * n) end).()
-    adjust_funds(player, :decrease, loss)
+  def bribe_mugger(%Player{cash: cash} = player) when cash >= 500 do
+    loss = Enum.random(10..30) |> Kernel./(100) |> (fn n -> round(cash * n) end).()
+    adjust_cash(player, :decrease, loss)
   end
 
   def bribe_mugger(%Player{pack: pack} = player) do
@@ -289,30 +289,30 @@ defmodule FutureButcherEngine.Player do
   end
 
 
-  # Funds ----------------------------------------------------------------------
+  # cash ----------------------------------------------------------------------
 
   @doc """
-  Returns an adjusted Player struct with funds increased or decreased by the passed in amount.
+  Returns an adjusted Player struct with cash increased or decreased by the passed in amount.
 
     ## Examples
 
-        iex > FutureButcherEngine.Player.adjust_funds(%Player{funds: 5000, ...}, :increase, 1000)
-        %FutureButcherEngine.Player{funds: 6000, ...}
+        iex > FutureButcherEngine.Player.adjust_cash(%Player{cash: 5000, ...}, :increase, 1000)
+        %FutureButcherEngine.Player{cash: 6000, ...}
 
-        iex > FutureButcherEngine.Player.adjust_funds(%Player{funds: 5000, ...}, :decrease, 1000)
-        %FutureButcherEngine.Player{funds: 4000, ...}
+        iex > FutureButcherEngine.Player.adjust_cash(%Player{cash: 5000, ...}, :decrease, 1000)
+        %FutureButcherEngine.Player{cash: 4000, ...}
   """
-  @spec adjust_funds(player, direction :: atom, amount :: integer) :: {:ok, player}
-  def adjust_funds(%Player{funds: funds} = player, :decrease, amount) when amount > funds do
-    {:ok, player |> Map.put(:funds, 0)}
+  @spec adjust_cash(player, direction :: atom, amount :: integer) :: {:ok, player}
+  def adjust_cash(%Player{cash: cash} = player, :decrease, amount) when amount > cash do
+    {:ok, player |> Map.put(:cash, 0)}
   end
 
-  def adjust_funds(player, :decrease, amount) do
-    {:ok, player |> decrease_attribute(:funds, amount) }
+  def adjust_cash(player, :decrease, amount) do
+    {:ok, player |> decrease_attribute(:cash, amount) }
   end
 
-  def adjust_funds(player, :increase, amount) do
-    {:ok, player |> increase_attribute(:funds, amount)}
+  def adjust_cash(player, :increase, amount) do
+    {:ok, player |> increase_attribute(:cash, amount)}
   end
 
 

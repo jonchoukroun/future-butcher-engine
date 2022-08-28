@@ -13,7 +13,7 @@ defmodule GameTest do
 
     test "creates player with no finances or weapon", context do
       assert context.state.player.player_name == "Frank"
-      assert context.state.player.funds       == 5000
+      assert context.state.player.cash       == 5000
       assert context.state.player.debt        == 5000
       assert context.state.player.weapon      == nil
     end
@@ -41,22 +41,22 @@ defmodule GameTest do
   # Debt/loans -----------------------------------------------------------------
 
   describe ".pay_debt" do
-    setup [:setup_game, :increase_funds]
+    setup [:setup_game, :increase_cash]
 
-    test "should reduce funds and clear debt", context do
+    test "should reduce cash and clear debt", context do
       Game.pay_debt(context.game)
       test_state = :sys.get_state(context.game)
 
-      assert test_state.player.funds === 5000
+      assert test_state.player.cash === 5000
       assert test_state.player.debt === 0
     end
   end
 
-  describe ".pay_debt when debt is greater than funds" do
-    setup [:setup_game, :decrease_funds]
+  describe ".pay_debt when debt is greater than cash" do
+    setup [:setup_game, :decrease_cash]
 
-    test "should return error if funds is less then debt", context do
-      assert Game.pay_debt(context.game) === :insufficient_funds
+    test "should return error if cash is less then debt", context do
+      assert Game.pay_debt(context.game) === :insufficient_cash
     end
   end
 
@@ -152,15 +152,15 @@ defmodule GameTest do
       %{game: game, state: state}
     end
 
-    defp increase_funds(context) do
-      test_player = %Player{context.state.player | funds: 10000}
+    defp increase_cash(context) do
+      test_player = %Player{context.state.player | cash: 10000}
       :sys.replace_state(context.game, fn _state -> %{context.state | player: test_player} end)
 
       %{game: context.game, state: :sys.get_state(context.game)}
     end
 
-    defp decrease_funds(context) do
-      test_player = %Player{context.state.player | funds: 100}
+    defp decrease_cash(context) do
+      test_player = %Player{context.state.player | cash: 100}
       :sys.replace_state(context.game, fn _state -> %{context.state | player: test_player} end)
 
       %{game: context.game, state: :sys.get_state(context.game)}
