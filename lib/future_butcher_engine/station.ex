@@ -1,9 +1,9 @@
 defmodule FutureButcherEngine.Station do
-  alias FutureButcherEngine.{Cut, Station, Weapon, Pack}
+  alias FutureButcherEngine.{Cut, Pack, Station, Weapon}
 
-  @enforce_keys [:station_name, :market, :store]
-  @derive {Jason.Encoder, only: [:station_name, :market, :store]}
-  defstruct [:station_name, :market, :store]
+  @enforce_keys [:station_name, :market, :store, :clinic_cost]
+  @derive {Jason.Encoder, only: [:station_name, :market, :store, :clinic_cost]}
+  defstruct [:station_name, :market, :store, :clinic_cost]
 
   @stations %{
     :beverly_hills => %{
@@ -40,6 +40,9 @@ defmodule FutureButcherEngine.Station do
 
   def station_names, do: @station_names
 
+  @clinic_cost 50_000
+  def get_clinic_cost, do: @clinic_cost
+
   def get_base_crime_rate(:bell_gardens), do: {:error, :invalid_station}
 
   def get_base_crime_rate(station) when station in @station_names do
@@ -57,16 +60,27 @@ defmodule FutureButcherEngine.Station do
   def new(:bell_gardens, turns_left) do
     %Station{
       station_name: :bell_gardens,
-      store:        generate_store(turns_left),
-      market:       nil
+      store: generate_store(turns_left),
+      market: nil,
+      clinic_cost: nil
+    }
+  end
+
+  def new(:venice_beach, _turns_left) do
+    %Station{
+      station_name: :venice_beach,
+      market: nil,
+      store: nil,
+      clinic_cost: @clinic_cost
     }
   end
 
   def new(station, _turns_left) when station in @station_names do
     %Station{
       station_name: station,
-      market:       generate_market(station),
-      store:        nil
+      market: generate_market(station),
+      store: nil,
+      clinic_cost: nil
     }
   end
 

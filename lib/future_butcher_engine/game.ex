@@ -73,6 +73,12 @@ defmodule FutureButcherEngine.Game do
   end
 
 
+  # Health ----------------------------------------------------------------------
+
+  def restore_health(game) do
+    GenServer.call(game, {:restore_health})
+  end
+
   # Items ----------------------------------------------------------------------
 
   def buy_pack(game, pack) do
@@ -131,6 +137,22 @@ defmodule FutureButcherEngine.Game do
   def handle_call({:pay_debt}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :pay_debt),
         {:ok, player} <- Player.pay_debt(state_data.player)
+    do
+      state_data
+      |> update_rules(rules)
+      |> update_player(player)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+
+
+  # Heath clinic --------------------------------------------------------------
+
+  def handle_call({:restore_health}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :restore_health),
+      {:ok, player} <- Player.restore_health(state_data.player)
     do
       state_data
       |> update_rules(rules)
@@ -203,16 +225,22 @@ defmodule FutureButcherEngine.Game do
 
   # Handles running from mugger option when player has no weapon
   def handle_call({:fight_mugger}, _from, state_data) do
-    with        {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
+    with {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
       {:ok, player, outcome} <- Player.fight_mugger(state_data.player),
-        {:ok, turns_penalty} <- generate_turns_penalty(outcome),
-               {:ok, penalized_player} <- penalize_assets(player, outcome),
-               {:ok, final_player} <- Player.accrue_debt(penalized_player, turns_penalty)
+      {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left, outcome),
+      {:ok, final_player} <- Player.accrue_debt(player, turns_penalty)
     do
-      state_data
-      |> update_player(final_player)
-      |> update_rules(decrement_turns(rules, turns_penalty))
-      |> reply_success(:ok)
+      if outcome == :death do
+        state_data
+        |> update_player(player)
+        |> update_rules(%Rules{turns_left: 0, state: :game_over})
+        |> reply_success(:game_over)
+      else
+        state_data
+        |> update_player(final_player)
+        |> update_rules(decrement_turns(rules, turns_penalty))
+        |> reply_success(:ok)
+      end
     else
       {:error, msg} -> reply_failure(state_data, msg)
     end
@@ -331,13 +359,10 @@ defmodule FutureButcherEngine.Game do
 
   # Computations ===============================================================
 
-  defp generate_turns_penalty(:victory), do: {:ok, 0}
-
-  defp generate_turns_penalty(:defeat), do: {:ok, 1}
-
-  defp penalize_assets(player, :victory), do: {:ok, player}
-
-  defp penalize_assets(player, :defeat), do: Player.bribe_mugger(player)
+  defp generate_turns_penalty(turns_left, :defeat) do
+    {:ok, Enum.random(1..Enum.min([turns_left, 3]))}
+  end
+  defp generate_turns_penalty(_, _), do: {:ok, 0}
 
   defp get_pack_details(store, pack) do
     if Map.get(store, pack) do
