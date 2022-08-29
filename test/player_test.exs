@@ -239,7 +239,7 @@ defmodule FutureButcherEngine.PlayerTest do
       # Will result in Enum.random(1..9) to return 7
       :rand.seed(:exsplus, {1, 2, 1})
       {:ok, %Player{health: health}, _} = Player.fight_mugger(context.player)
-      assert health < 100
+      assert health <= 100
     end
 
     test "should return same health on victory", context do
