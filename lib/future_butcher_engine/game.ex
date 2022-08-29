@@ -73,6 +73,12 @@ defmodule FutureButcherEngine.Game do
   end
 
 
+  # Health ----------------------------------------------------------------------
+
+  def restore_health(game) do
+    GenServer.call(game, {:restore_health})
+  end
+
   # Items ----------------------------------------------------------------------
 
   def buy_pack(game, pack) do
@@ -131,6 +137,22 @@ defmodule FutureButcherEngine.Game do
   def handle_call({:pay_debt}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :pay_debt),
         {:ok, player} <- Player.pay_debt(state_data.player)
+    do
+      state_data
+      |> update_rules(rules)
+      |> update_player(player)
+      |> reply_success(:ok)
+    else
+      {:error, msg} -> reply_failure(state_data, msg)
+    end
+  end
+
+
+  # Heath clinic --------------------------------------------------------------
+
+  def handle_call({:restore_health}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :restore_health),
+      {:ok, player} <- Player.restore_health(state_data.player)
     do
       state_data
       |> update_rules(rules)

@@ -3,7 +3,7 @@ defmodule FutureButcherEngine.Player do
   Player modules creates player, handles buying/selling of cuts and weapons, debt and health management, and muggings.
   """
 
-  alias FutureButcherEngine.{Player, Weapon}
+  alias FutureButcherEngine.{Player, Station, Weapon}
 
   @enforce_keys [:player_name, :cash, :debt, :health, :pack, :pack_space, :weapon]
   @derive {
@@ -16,7 +16,6 @@ defmodule FutureButcherEngine.Player do
   @base_space 20
   @starter_loan 5000
   @full_health 100
-  @clinic_cost 20_000
   @cut_keys [:brains, :heart, :flank, :ribs, :liver]
   @weapon_type [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
 
@@ -89,6 +88,17 @@ defmodule FutureButcherEngine.Player do
   def decrease_health(%Player{health: health} = player, amount) do
     {:ok, %Player{player | health: health - amount}}
   end
+
+  @spec restore_health(player) :: {:ok, player} | {:error, atom}
+  def restore_health(%Player{health: health}) when health == 0, do: {:error, :dead_player}
+  def restore_health(%Player{cash: cash} = player) do
+    case cash < Station.get_clinic_cost() do
+      true -> {:error, :insufficient_funds}
+      false -> {:ok, %Player{player | cash: cash - Station.get_clinic_cost(), health: @full_health}}
+    end
+  end
+
+
   # Packs ----------------------------------------------------------------------
 
   @doc """
@@ -425,5 +435,5 @@ defmodule FutureButcherEngine.Player do
   # Computations ===============================================================
   defp get_run_outcome(), do: Enum.random(0..9)
 
-  defp get_damage(), do: Enum.random(10..30)
+  defp get_damage(), do: Enum.random(0..30)
 end
