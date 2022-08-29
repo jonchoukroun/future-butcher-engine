@@ -225,11 +225,10 @@ defmodule FutureButcherEngine.Game do
 
   # Handles running from mugger option when player has no weapon
   def handle_call({:fight_mugger}, _from, state_data) do
-    with        {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
+    with {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
       {:ok, player, outcome} <- Player.fight_mugger(state_data.player),
-        {:ok, turns_penalty} <- generate_turns_penalty(outcome),
-               {:ok, penalized_player} <- penalize_assets(player, outcome),
-               {:ok, final_player} <- Player.accrue_debt(penalized_player, turns_penalty)
+      {:ok, turns_penalty} <- generate_turns_penalty(outcome),
+      {:ok, final_player} <- Player.accrue_debt(player, turns_penalty)
     do
       if outcome == :death do
         state_data
@@ -363,10 +362,6 @@ defmodule FutureButcherEngine.Game do
   defp generate_turns_penalty(:death), do: {:ok, 0}
   defp generate_turns_penalty(:victory), do: {:ok, 0}
   defp generate_turns_penalty(:defeat), do: {:ok, 1}
-
-  defp penalize_assets(player ,:death), do: {:ok, player}
-  defp penalize_assets(player, :victory), do: {:ok, player}
-  defp penalize_assets(player, :defeat), do: Player.bribe_mugger(player)
 
   defp get_pack_details(store, pack) do
     if Map.get(store, pack) do
