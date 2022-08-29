@@ -301,13 +301,14 @@ defmodule FutureButcherEngine.Player do
   end
 
   def fight_mugger(player) do
-    case Weapon.get_damage(player.weapon) >= Enum.random(1..10) do
+    {:ok, damaged_player} = Player.decrease_health(player, get_damage())
+    case Weapon.get_damage(damaged_player.weapon) >= Enum.random(1..10) do
       true ->
-        harvest = harvest_mugger(player)
-        |> Enum.reduce(player.pack, fn cut, pack -> increase_cut(pack, cut, 1) end)
-        {:ok, player |> Map.put(:pack, harvest), :victory}
+        harvest = harvest_mugger(damaged_player)
+        |> Enum.reduce(damaged_player.pack, fn cut, pack -> increase_cut(pack, cut, 1) end)
+        {:ok, damaged_player |> Map.put(:pack, harvest), :victory}
       false ->
-        {:ok, player, :defeat}
+        {:ok, damaged_player, :defeat}
     end
   end
 

@@ -19,6 +19,33 @@ defmodule FutureButcherEngine.PlayerTest do
   end
 
 
+  # Health ---------------------------------------------------------------------
+
+  describe ".decrease_health" do
+    setup [:initialize_player]
+
+    test "with missing damage amount", context do
+      assert Player.decrease_health(context.player) === {:error, :missing_damage_amount}
+    end
+
+    test "with damage amount = 0", context do
+      {:ok, player} = Player.decrease_health(context.player, 0)
+      assert player.health === 100
+    end
+
+    test "with damage less than health", context do
+      damage = 50
+      {:ok, %Player{health: health}} = Player.decrease_health(context.player, damage)
+      assert health === context.player.health - damage
+    end
+
+    test "with damage greater than health", context do
+      damage = 150
+      {:ok, %Player{health: health}} = Player.decrease_health(context.player, damage)
+      assert health === context.player.health - damage
+    end
+  end
+
   # Packs ----------------------------------------------------------------------
 
   describe ".buy_pack" do
@@ -199,13 +226,27 @@ defmodule FutureButcherEngine.PlayerTest do
     setup [:initialize_player]
 
     test "should return victory on rand values 8 and higher, or defeat", context do
-      # Will result in Enum.random(1..9) to return 8 then 7
-      :rand.seed(:exsplus, {1, 2, 1})
+      # Will result in Enum.random(1..9) to return 9 then 1
+      :rand.seed(:exsplus, {1, 2, 2})
       outcomes = for _ <- 1..2 do
         {:ok, _, outcome} = Player.fight_mugger(context.player)
         outcome
       end
-      assert outcomes === [:defeat, :victory]
+      assert outcomes === [:victory, :defeat]
+    end
+
+    test "should decrease health on defeat", context do
+      # Will result in Enum.random(1..9) to return 7
+      :rand.seed(:exsplus, {1, 2, 1})
+      {:ok, %Player{health: health}, _} = Player.fight_mugger(context.player)
+      assert health < 100
+    end
+
+    test "should return same health on victory", context do
+      # Will result in Enum.random(1..9) to return 9
+      :rand.seed(:exsplus, {1, 2, 2})
+      {:ok, %Player{health: health}, _} = Player.fight_mugger(context.player)
+      assert health === 100
     end
   end
 
@@ -229,6 +270,11 @@ defmodule FutureButcherEngine.PlayerTest do
 
         {:ok, _player, :defeat} -> :ok
       end
+    end
+
+    test "should decrease health", context do
+      {:ok, player, _} = Player.fight_mugger(context.player)
+      assert player.health <= 100
     end
   end
 
