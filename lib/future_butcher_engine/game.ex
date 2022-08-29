@@ -227,7 +227,7 @@ defmodule FutureButcherEngine.Game do
   def handle_call({:fight_mugger}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :fight_mugger),
       {:ok, player, outcome} <- Player.fight_mugger(state_data.player),
-      {:ok, turns_penalty} <- generate_turns_penalty(outcome),
+      {:ok, turns_penalty} <- generate_turns_penalty(state_data.rules.turns_left, outcome),
       {:ok, final_player} <- Player.accrue_debt(player, turns_penalty)
     do
       if outcome == :death do
@@ -359,9 +359,10 @@ defmodule FutureButcherEngine.Game do
 
   # Computations ===============================================================
 
-  defp generate_turns_penalty(:death), do: {:ok, 0}
-  defp generate_turns_penalty(:victory), do: {:ok, 0}
-  defp generate_turns_penalty(:defeat), do: {:ok, 1}
+  defp generate_turns_penalty(turns_left, :defeat) do
+    {:ok, Enum.random(1..Enum.min([turns_left, 3]))}
+  end
+  defp generate_turns_penalty(_, _), do: {:ok, 0}
 
   defp get_pack_details(store, pack) do
     if Map.get(store, pack) do
