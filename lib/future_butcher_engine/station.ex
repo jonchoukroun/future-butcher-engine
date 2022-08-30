@@ -130,9 +130,9 @@ defmodule FutureButcherEngine.Station do
   def generate_weapons_stock(turns_left) do
     Weapon.weapon_types
     |> Enum.map(fn weapon -> {weapon, %{
-        price:  Weapon.generate_price(weapon, turns_left),
+        price: Weapon.generate_price(weapon, turns_left),
         damage: Weapon.get_damage(weapon),
-        cuts:   Weapon.get_cuts(weapon)
+        can_harvest: Weapon.can_harvest(weapon)
         }} end)
   end
 
@@ -148,7 +148,17 @@ defmodule FutureButcherEngine.Station do
   # Market ---------------------------------------------------------------------
 
   defp generate_market(station) do
-    Map.new(Cut.cut_names(), fn cut -> {cut, generate_cut(cut, station)} end)
+    # Generate liver first then ribs as inverse
+    liver = generate_cut(:liver, station)
+    inverse_quantity = Cut.maximum_quantity(:liver) - liver.quantity;
+    ribs = generate_cut(:ribs, inverse_quantity)
+    Map.new([:brains, :heart, :flank], fn cut -> {cut, generate_cut(cut, station)} end)
+    |> Map.put(:liver, liver)
+    |> Map.put(:ribs, ribs)
+  end
+
+  defp generate_cut(cut, quantity) when is_integer(quantity) do
+    %{quantity: quantity, price: get_price(quantity, cut)}
   end
 
   defp generate_cut(cut, station) do
@@ -158,7 +168,6 @@ defmodule FutureButcherEngine.Station do
 
   defp get_min(:compton), do: 4
   defp get_min(:hollywood), do: 3
-  defp get_min(:venice_beach), do: 2
   defp get_min(:downtown), do: 1
   defp get_min(:beverly_hills), do: 0
 

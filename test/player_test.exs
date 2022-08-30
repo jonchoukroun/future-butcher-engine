@@ -196,7 +196,7 @@ defmodule FutureButcherEngine.PlayerTest do
     end
 
     test "with same weapon as current weapon should return error", context do
-      assert Player.replace_weapon(context.player, :box_cutter, 0, 0) ==
+      assert Player.replace_weapon(context.player, :machete, 0, 0) ==
         {:error, :same_weapon_type}
     end
 
@@ -207,8 +207,8 @@ defmodule FutureButcherEngine.PlayerTest do
     end
 
     test "with valid args should replace weapon and adjust cash", context do
-      {:ok, test_player} = Player.replace_weapon(context.player, :machete, 1000, 200)
-      assert test_player.weapon == :machete
+      {:ok, test_player} = Player.replace_weapon(context.player, :hockey_stick, 1000, 200)
+      assert test_player.weapon == :hockey_stick
       assert test_player.cash  == 4200
     end
 
@@ -260,17 +260,19 @@ defmodule FutureButcherEngine.PlayerTest do
       assert Enum.member?(fight_outcomes, test_outcome)
     end
 
-    test "victory may increase cuts owned", context do
-      base_cuts_owned = get_pack_sum(context.player.pack)
+    # test "victory with bladed weapon harvests all cuts", context do
+    #   base_cuts_owned = get_pack_sum(context.player.pack)
 
-      case Player.fight_mugger(context.player) do
-        {:ok, test_player, :victory} ->
-          cuts_owned = get_pack_sum(test_player.pack)
-          assert cuts_owned >= base_cuts_owned
-
-        {:ok, _player, :defeat} -> :ok
-      end
-    end
+    #   case Player.fight_mugger(context.player) do
+    #     {:ok, player, :victory} ->
+    #       assert player.pack.brains === 1
+    #       assert player.pack.heart === 1
+    #       assert player.pack.flank === 2
+    #       assert player.pack.liver === 1
+    #       assert player.pack.ribs === 5
+    #     {:ok, _player, :defeat} -> :ok
+    #   end
+    # end
 
     test "should decrease health", context do
       {:ok, player, _} = Player.fight_mugger(context.player)
@@ -370,7 +372,7 @@ defmodule FutureButcherEngine.PlayerTest do
   end
 
   defp buy_weapon(context) do
-    {:ok, player} = Player.buy_weapon(context.player, :box_cutter, 0)
+    {:ok, player} = Player.buy_weapon(context.player, :machete, 0)
     %{player: player}
   end
 
