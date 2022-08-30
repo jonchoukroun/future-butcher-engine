@@ -3,7 +3,7 @@ defmodule FutureButcherEngine.Player do
   Player modules creates player, handles buying/selling of cuts and weapons, debt and health management, and muggings.
   """
 
-  alias FutureButcherEngine.{Player, Station, Weapon}
+  alias FutureButcherEngine.{Cut, Player, Station, Weapon}
 
   @enforce_keys [:player_name, :cash, :debt, :health, :pack, :pack_space, :weapon]
   @derive {
@@ -407,7 +407,7 @@ defmodule FutureButcherEngine.Player do
   # Property updates -----------------------------------------------------------
 
   defp harvest_mugger(player) do
-    Weapon.get_cuts(player.weapon)
+    Cut.cut_names()
     |> Enum.reject(fn _cut -> Enum.random(1..10) > 5 end)
     |> Enum.map_reduce(get_weight_carried(player), fn cut, acc ->
       {(if player.pack_space > acc, do: cut), (acc + 1)} end)
