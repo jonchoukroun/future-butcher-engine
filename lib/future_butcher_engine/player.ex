@@ -435,5 +435,5 @@ defmodule FutureButcherEngine.Player do
   # Computations ===============================================================
   defp get_run_outcome(), do: Enum.random(0..9)
 
-  defp get_damage(), do: Enum.random(0..30)
+  defp get_damage(), do: Enum.random(20..60)
 end
