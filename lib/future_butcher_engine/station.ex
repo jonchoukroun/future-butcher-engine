@@ -111,7 +111,7 @@ defmodule FutureButcherEngine.Station do
   def calculate_mugging_probability(_, :bell_gardens), do: 0
 
   def calculate_mugging_probability(pack_space, station) do
-    pack_adjustment = (pack_space - 20) / 400
+    pack_adjustment = (pack_space - 20) / 300
     get_base_crime_rate(station)
     |> Kernel.+(pack_adjustment)
     |> Float.round(3)
