@@ -317,9 +317,11 @@ defmodule FutureButcherEngine.Player do
     else
       case Weapon.get_damage(damaged_player.weapon) >= Enum.random(1..10) do
         true ->
-          harvest = harvest_mugger(damaged_player)
-          |> Enum.reduce(damaged_player.pack, fn cut, pack -> increase_cut(pack, cut, 1) end)
-          {:ok, damaged_player |> Map.put(:pack, harvest), :victory}
+          {
+            :ok,
+            Map.replace(damaged_player, :pack, harvest_mugger(damaged_player)),
+            :victory
+          }
         false ->
           {:ok, damaged_player, :defeat}
       end
@@ -410,13 +412,45 @@ defmodule FutureButcherEngine.Player do
 
   # Property updates -----------------------------------------------------------
 
-  defp harvest_mugger(player) do
-    Cut.cut_names()
-    |> Enum.reject(fn _cut -> Enum.random(1..10) > 5 end)
-    |> Enum.map_reduce(get_weight_carried(player), fn cut, acc ->
-      {(if player.pack_space > acc, do: cut), (acc + 1)} end)
-    |> elem(0)
-    |> Enum.reject(fn cut -> is_nil(cut) end)
+  def harvest_mugger(%{pack: pack, weapon: weapon}) when is_nil((weapon)) do
+    pack
+  end
+
+  def harvest_mugger(%{pack: pack, weapon: weapon})
+  when weapon in [:hockey_stick, :brass_knuckles], do: pack
+
+  def harvest_mugger(%{pack: pack, pack_space: pack_space}) do
+    weight_carried = Enum.reduce(pack, 0, fn {_, n}, acc -> acc + n end)
+    space_available = pack_space - weight_carried
+    harvest = %{brains: 1, heart: 1, flank: 2, liver: 1, ribs: 5}
+
+    {new_pack, _} =
+      Enum.reduce_while(pack, {pack, space_available}, fn {cut, carried}, acc ->
+        to_add = Map.get(harvest, cut)
+        update_pack(cut, carried, to_add, acc)
+      end
+    )
+
+    new_pack
+  end
+
+  defp update_pack(_cut, _carried, _value, {pack, space}) when space === 0 do
+    {:halt, {pack, space}}
+  end
+
+  defp update_pack(cut, carried, value, {pack, space})
+    when value + carried >= space do
+      {
+        :halt,
+        {Map.replace(pack, cut, carried + space), 0}
+      }
+  end
+
+  defp update_pack(cut, carried, value, {pack, space}) do
+    {
+      :cont,
+      {Map.replace(pack, cut, carried + value), space - value}
+    }
   end
 
   defp increase_cut(pack, cut, amount) do

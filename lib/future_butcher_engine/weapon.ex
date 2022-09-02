@@ -4,7 +4,7 @@ defmodule FutureButcherEngine.Weapon do
     :hockey_stick => %{:damage => 9, :can_harvest => false},
     :machete => %{:damage => 7, :can_harvest => true},
     :hedge_clippers => %{:damage => 6, :can_harvest => true},
-    :box_cutter => %{:damage => 5, :can_harvest => false},
+    :box_cutter => %{:damage => 5, :can_harvest => true},
     :brass_knuckles => %{:damage => 3, :can_harvest => false},
   }
 

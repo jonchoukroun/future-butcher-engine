@@ -172,7 +172,7 @@ defmodule FutureButcherEngine.PlayerTest do
   end
 
   describe ".buy_weapon with existing weapon" do
-    setup [:initialize_player, :buy_weapon]
+    setup [:initialize_player, :buy_bladed_weapon]
 
     test "should return error", context do
       assert Player.buy_weapon(context.player, :box_cutter, 0) == {:error, :already_owns_weapon}
@@ -188,7 +188,7 @@ defmodule FutureButcherEngine.PlayerTest do
   end
 
   describe ".replace_weapon with existing weapon" do
-    setup [:initialize_player, :buy_weapon]
+    setup [:initialize_player, :buy_bladed_weapon]
 
     test "with insufficient cash + trade-in value should return error", context do
       assert Player.replace_weapon(context.player, :hedge_clippers, 6000, 100) ==
@@ -251,7 +251,7 @@ defmodule FutureButcherEngine.PlayerTest do
   end
 
   describe ".fight_mugger" do
-    setup [:initialize_player, :buy_weapon]
+    setup [:initialize_player, :buy_bladed_weapon]
 
     test "should return defeat or victory", context do
       fight_outcomes = [:defeat, :victory]
@@ -324,6 +324,52 @@ defmodule FutureButcherEngine.PlayerTest do
     end
   end
 
+  describe ".harvest_mugger without a weapon" do
+    setup [:initialize_player, :buy_cut]
+
+    test "should return current pack", context do
+      assert context.player.pack === Player.harvest_mugger(context.player)
+    end
+  end
+
+  describe ".harvest_mugger with blunt weapon" do
+    setup [:initialize_player, :buy_blunt_weapon]
+
+    test "should return current pack", context do
+      assert context.player.pack === Player.harvest_mugger(context.player)
+    end
+  end
+
+  describe ".harvest_mugger with bladed weapon" do
+    setup [:initialize_player, :buy_bladed_weapon]
+
+    test "should increase weight carried", context do
+      player = Map.replace(context.player, :pack, Player.harvest_mugger(context.player))
+      assert player.pack === %{brains: 1, heart: 1, flank: 2, liver: 1, ribs: 5}
+
+      player = Map.replace(player, :pack, Player.harvest_mugger(player))
+      assert player.pack === %{brains: 2, heart: 2, flank: 4, liver: 2, ribs: 10}
+
+      player = Map.replace(player, :pack, Player.harvest_mugger(player))
+      assert player.pack === %{brains: 2, heart: 2, flank: 4, liver: 2, ribs: 10}
+    end
+  end
+
+  describe ".harvest_mugger with no pack space" do
+    setup [
+      :initialize_player,
+      :buy_bladed_weapon,
+      :add_other_cuts,
+      :add_other_cuts,
+      :add_other_cuts,
+      :add_other_cuts
+    ]
+
+    test "should not update pack", context do
+      assert Player.harvest_mugger(context.player) === context.player.pack
+    end
+  end
+
 
   # cash ----------------------------------------------------------------------
 
@@ -371,8 +417,13 @@ defmodule FutureButcherEngine.PlayerTest do
     %{player: player}
   end
 
-  defp buy_weapon(context) do
+  defp buy_bladed_weapon(context) do
     {:ok, player} = Player.buy_weapon(context.player, :machete, 0)
+    %{player: player}
+  end
+
+  defp buy_blunt_weapon(context) do
+    {:ok, player} = Player.buy_weapon(context.player, :hockey_stick, 0)
     %{player: player}
   end
 
