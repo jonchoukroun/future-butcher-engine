@@ -4,7 +4,7 @@ defmodule FutureButcherEngine.Mixfile do
   def project do
     [
       app: :future_butcher_engine,
-      version: "1.0.4",
+      version: "1.0.3",
       elixir: "~> 1.13.4",
       description: description(),
       package: package(),
