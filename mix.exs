@@ -4,7 +4,7 @@ defmodule FutureButcherEngine.Mixfile do
   def project do
     [
       app: :future_butcher_engine,
-      version: "1.0.3",
+      version: "1.0.4",
       elixir: "~> 1.13.4",
       description: description(),
       package: package(),
@@ -37,7 +37,7 @@ defmodule FutureButcherEngine.Mixfile do
 
   defp package do
     [
-      licenses: ["GNU GPLv3"],
+      licenses: ["GPL-3.0-only"],
       links: %{"GitHub" => "https://github.com/jonchoukroun/future-butcher-engine"}
     ]
   end
