@@ -1,11 +1,11 @@
 defmodule FutureButcherEngine.Weapon do
 
   @weapons %{
-    :hockey_stick => %{:damage => 9, :can_harvest => false},
+    :hockey_stick => %{:damage => 10, :can_harvest => false},
     :machete => %{:damage => 7, :can_harvest => true},
     :hedge_clippers => %{:damage => 6, :can_harvest => true},
     :box_cutter => %{:damage => 5, :can_harvest => true},
-    :brass_knuckles => %{:damage => 3, :can_harvest => false},
+    :brass_knuckles => %{:damage => 5, :can_harvest => false},
   }
 
   @weapons_list Map.keys(@weapons)
@@ -13,11 +13,11 @@ defmodule FutureButcherEngine.Weapon do
   def weapon_types, do: @weapons_list
 
   def generate_price(weapon, turns_left) when weapon in @weapons_list do
-    offset = if can_harvest(weapon), do: 1200, else: 600
-    offset
-    |> Kernel.*(get_damage(weapon))
+    harvest_offset = if can_harvest(weapon), do: 1.2, else: 1
+    damage_discount = 10 - get_damage(weapon) |> Kernel.*(16_000)
+    (100_000 - damage_discount)
     |> Kernel./(turns_left + 1)
-    |> Kernel.*(200)
+    |> Kernel.*(22 * harvest_offset )
     |> round()
   end
 
