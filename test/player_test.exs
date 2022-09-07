@@ -261,6 +261,18 @@ defmodule FutureButcherEngine.PlayerTest do
 
   # Muggings -------------------------------------------------------------------
 
+  describe ".fight_mugger with essential oil and no weapon" do
+    setup [:initialize_player, :add_oil]
+
+    test "should return victory and deplete oil", context do
+      assert Player.fight_mugger(context.player) === {
+        :ok,
+        %Player{context.player | has_oil: false},
+        :victory
+      }
+    end
+  end
+
   describe ".fight_mugger with no weapon" do
     setup [:initialize_player]
 
@@ -437,6 +449,10 @@ defmodule FutureButcherEngine.PlayerTest do
   defp buy_weapon(context) do
     {:ok, player} = Player.buy_weapon(context.player, :hedge_clippers, 0)
     %{player: player}
+  end
+
+  defp add_oil(context) do
+    %{player: %Player{context.player | has_oil: true}}
   end
 
 

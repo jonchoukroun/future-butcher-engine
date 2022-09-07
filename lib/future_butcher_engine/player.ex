@@ -333,13 +333,18 @@ defmodule FutureButcherEngine.Player do
 
   @doc """
   Returns an updated Player struct adjusted on the outcome of the fight. When
-  the player has no weapon, they have a 20% chance of successfully running. If the
-  player's health drops to 0 or below, will return a game-ending outcome.
+  the player has no weapon, they have a 50% chance of successfully running. Each
+  weapon increases the chance of winning the fight. If the player has essential
+  oil, their chance of successfully running is 100%. If the player's health drops
+  to 0 or below, will return a game-ending outcome.
 
     ## Examples
 
         iex > FutureButcherEngine.Player.fight_mugger(%Player{weapon: nil, ...})
         {:ok, %FutureButcherEngine.Player{...}, :defeat}
+
+        iex > FutureButcherEngine.Player.fight_mugger(%Player{weapon: nil, has_oil: true ...})
+        {:ok, %FutureButcherEngine.Player{...}, :victory}
 
         iex > FutureButcherEngine.Player.fight_mugger(%Player{pack: %{heart: 1, ...}, weapon: :machete, ...})
         {:ok, %FutureButcherEngine.Player{pack: %{heart: 2}}, :victory}
@@ -348,6 +353,10 @@ defmodule FutureButcherEngine.Player do
         {:ok, %FutureButcherEngine.Player{health: -10}, :death}
   """
   @spec fight_mugger(player) :: {:ok, player, outcome :: atom}
+  def fight_mugger(%Player{weapon: nil, has_oil: true} = player) do
+    {:ok, %Player{player | has_oil: false}, :victory}
+  end
+
   def fight_mugger(%Player{weapon: nil} = player) do
     if get_run_outcome() >= 8 do
       {:ok, player, :victory}
