@@ -1,11 +1,11 @@
 defmodule FutureButcherEngine.Weapon do
 
   @weapons %{
-    :hockey_stick => %{:damage => 10, :can_harvest => false},
-    :machete => %{:damage => 7, :can_harvest => true},
-    :hedge_clippers => %{:damage => 6, :can_harvest => true},
-    :box_cutter => %{:damage => 5, :can_harvest => true},
-    :brass_knuckles => %{:damage => 5, :can_harvest => false},
+    :katana => %{:damage => 10, :min => 100_000, :max => 800_000},
+    :machete => %{:damage => 9, :min => 60_000, :max => 480_000},
+    :power_claw => %{:damage => 8, :min => 30_000, :max => 240_000},
+    :hedge_clippers => %{:damage => 7, :min => 20_000, :max => 160_000},
+    :box_cutter => %{:damage => 6, :min => 15_000, :max => 120_000},
   }
 
   @weapons_list Map.keys(@weapons)
@@ -25,9 +25,4 @@ defmodule FutureButcherEngine.Weapon do
 
   def get_damage(weapon) when weapon in @weapons_list, do: Map.get(@weapons, weapon).damage
   def get_damage(_weapon), do: {:error, :invalid_weapon_type}
-
-  def can_harvest(weapon) when weapon in @weapons_list do
-    Map.get(@weapons, weapon).can_harvest
-  end
-  def can_harvest(_), do: {:error, :invalid_weapon_type}
 end

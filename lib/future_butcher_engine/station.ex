@@ -131,8 +131,7 @@ defmodule FutureButcherEngine.Station do
     Weapon.weapon_types
     |> Enum.map(fn weapon -> {weapon, %{
         price: Weapon.generate_price(weapon, turns_left),
-        damage: Weapon.get_damage(weapon),
-        can_harvest: Weapon.can_harvest(weapon)
+        damage: Weapon.get_damage(weapon)
         }} end)
   end
 
