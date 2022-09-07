@@ -313,6 +313,22 @@ defmodule FutureButcherEngine.Player do
   end
 
 
+  @doc """
+  Returns an updated Player struct with has_oil set to false. If the player has
+  no oil, it is a no-op.
+
+    ## Examples
+
+      iex > FutureButcherEngine.Player.use_oil(%Player{has_oil: false, ...})
+      {:ok, %Player{has_oil: false, ...}}
+
+      iex > FutureButcherEngine.Player.use_oil(%Player{has_oil: true, ...})
+      {:ok, %Player{has_oil: false, ...}}
+  """
+  @spec use_oil(player):: {:ok, player}
+  def use_oil(player), do: {:ok, %Player{player | has_oil: false}}
+
+
   # Muggings -------------------------------------------------------------------
 
   @doc """

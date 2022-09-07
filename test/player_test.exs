@@ -245,6 +245,19 @@ defmodule FutureButcherEngine.PlayerTest do
     end
   end
 
+  describe ".use_oil" do
+    setup [:initialize_player]
+
+    test "returns player when not holding oil", context do
+      assert Player.use_oil(context.player) === {:ok, context.player}
+    end
+
+    test "returns player when holding oil", context do
+      player = Map.replace(context.player, :has_oil, true)
+      assert Player.use_oil(player) === {:ok, %Player{player | has_oil: false}}
+    end
+  end
+
 
   # Muggings -------------------------------------------------------------------
 
