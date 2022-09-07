@@ -97,7 +97,7 @@ defmodule FutureButcherEngine.Player do
   def restore_health(%Player{health: health}) when health == 0, do: {:error, :dead_player}
   def restore_health(%Player{cash: cash} = player) do
     case cash < Station.get_clinic_cost() do
-      true -> {:error, :insufficient_funds}
+      true -> {:error, :insufficient_cash}
       false -> {:ok, %Player{player | cash: cash - Station.get_clinic_cost(), health: @full_health}}
     end
   end
@@ -293,7 +293,7 @@ defmodule FutureButcherEngine.Player do
       {:error, :already_has_oil}
 
       iex > FutureButcherEngine.Player.buy_oil(%Player{cash: 19_999, ...})
-      {:error, :insufficient_funds}
+      {:error, :insufficient_cash}
 
       iex > FutureButcherEngine.Player.buy_oil(%Player{cash: 30_000, has_oil: false, ...})
       {:ok, %Player{cash: 10_000, has_oil: true, ...}}
@@ -302,7 +302,7 @@ defmodule FutureButcherEngine.Player do
   def buy_oil(%Player{has_oil: has_oil})
     when has_oil === true, do: {:error, :already_has_oil}
   def buy_oil(%Player{cash: cash})
-    when cash < @oil_price, do: {:error, :insufficient_funds}
+    when cash < @oil_price, do: {:error, :insufficient_cash}
   def buy_oil(%Player{cash: cash} = player) do
     {
       :ok, %Player{player |

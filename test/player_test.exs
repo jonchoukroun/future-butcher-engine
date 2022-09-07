@@ -234,7 +234,7 @@ defmodule FutureButcherEngine.PlayerTest do
 
     test "returns error when cash is too low", context do
       player = Map.replace(context.player, :cash, 19_999)
-      assert Player.buy_oil(player) === {:error, :insufficient_funds}
+      assert Player.buy_oil(player) === {:error, :insufficient_cash}
     end
 
     test "updates player", context do
