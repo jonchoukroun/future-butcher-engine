@@ -222,7 +222,56 @@ defmodule FutureButcherEngine.PlayerTest do
   end
 
 
+  # Adrenal Gland Essential Oil ------------------------------------------------
+
+  describe ".buy_oil" do
+    setup [:initialize_player]
+
+    test "returns error when already holding oil", context do
+      player = Map.replace(context.player, :has_oil, true)
+      assert Player.buy_oil(player) === {:error, :already_has_oil}
+    end
+
+    test "returns error when cash is too low", context do
+      player = Map.replace(context.player, :cash, 19_999)
+      assert Player.buy_oil(player) === {:error, :insufficient_cash}
+    end
+
+    test "updates player", context do
+      player = Map.replace(context.player, :cash, 30_000)
+      {:ok, %Player{cash: cash, has_oil: has_oil}} = Player.buy_oil(player)
+      assert has_oil === true
+      assert cash === 10_000
+    end
+  end
+
+  describe ".use_oil" do
+    setup [:initialize_player]
+
+    test "returns player when not holding oil", context do
+      assert Player.use_oil(context.player) === {:ok, context.player}
+    end
+
+    test "returns player when holding oil", context do
+      player = Map.replace(context.player, :has_oil, true)
+      assert Player.use_oil(player) === {:ok, %Player{player | has_oil: false}}
+    end
+  end
+
+
   # Muggings -------------------------------------------------------------------
+
+  describe ".fight_mugger with essential oil and no weapon" do
+    setup [:initialize_player, :add_oil]
+
+    test "should return victory and deplete oil", context do
+      assert Player.fight_mugger(context.player) === {
+        :ok,
+        %Player{context.player | has_oil: false},
+        :victory
+      }
+    end
+  end
 
   describe ".fight_mugger with no weapon" do
     setup [:initialize_player]
@@ -400,6 +449,10 @@ defmodule FutureButcherEngine.PlayerTest do
   defp buy_weapon(context) do
     {:ok, player} = Player.buy_weapon(context.player, :hedge_clippers, 0)
     %{player: player}
+  end
+
+  defp add_oil(context) do
+    %{player: %Player{context.player | has_oil: true}}
   end
 
 

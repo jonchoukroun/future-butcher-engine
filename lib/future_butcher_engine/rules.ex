@@ -78,6 +78,10 @@ defmodule FutureButcherEngine.Rules do
     {:ok, %Rules{rules | state: :in_game}}
   end
 
+  def check(%Rules{state: :in_game} = rules, :buy_oil) do
+    {:ok, %Rules{rules | state: :in_game}}
+  end
+
   def check(%Rules{state: :in_game} = rules, :restore_health) do
     {:ok, %Rules{rules | state: :in_game}}
   end
