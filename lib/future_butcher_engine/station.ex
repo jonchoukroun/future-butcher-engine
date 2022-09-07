@@ -8,17 +8,17 @@ defmodule FutureButcherEngine.Station do
   @stations %{
     :beverly_hills => %{
       :base_crime_rate => 1,
-      :travel_time     => 3,
+      :travel_time     => 2,
       :max_adjustment  => 0.5
       },
     :downtown => %{
       :base_crime_rate => 2,
-      :travel_time     => 2,
+      :travel_time     => 1,
       :max_adjustment  => 0.63
       },
     :venice_beach => %{
       :base_crime_rate => 3,
-      :travel_time     => 2,
+      :travel_time     => 1,
       :max_adjustment  => 0.75
       },
     :hollywood => %{
@@ -99,7 +99,7 @@ defmodule FutureButcherEngine.Station do
 
   def random_encounter(_pack_space, _turns_left, :bell_gardens), do: {:ok, :end_transit}
 
-  def random_encounter(_pack_space, turns_left, _station) when turns_left > 22 do
+  def random_encounter(_pack_space, turns_left, _station) when turns_left > 20 do
     {:ok, :end_transit}
   end
 
@@ -129,7 +129,7 @@ defmodule FutureButcherEngine.Station do
   # Store ----------------------------------------------------------------------
 
   def generate_store(turns_left) when turns_left > @store_open_time, do: %{}
-  def generate_store(turns_left) when turns_left > @store_close_time, do: %{}
+  def generate_store(turns_left) when turns_left < @store_close_time, do: %{}
 
   def generate_store(turns_left) do
     Enum.concat(generate_weapons_stock(turns_left), generate_packs_stock(turns_left))
@@ -180,7 +180,9 @@ defmodule FutureButcherEngine.Station do
   defp get_min(:beverly_hills), do: 0
 
   defp get_max(cut, station) do
-    round(Cut.maximum_quantity(cut) * get_max_adjustment(station))
+    Cut.maximum_quantity(cut)
+    |> Kernel.*(get_max_adjustment(station))
+    |> round()
   end
 
   defp get_price(quantity, cut) do

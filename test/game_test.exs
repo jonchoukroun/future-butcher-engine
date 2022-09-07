@@ -31,7 +31,7 @@ defmodule GameTest do
   describe ".start_game" do
     setup [:setup_game]
 
-    test "Sets station to downtown", context do
+    test "Sets station to compton", context do
       assert context.state.station.station_name == :compton
       assert context.state.station.market       != nil
     end
@@ -94,7 +94,7 @@ defmodule GameTest do
     setup [:setup_game, :navigate_to_beverly_hills]
 
     test "should decrement turns left", context do
-      assert context.test_state.rules.turns_left < context.state.rules.turns_left
+      assert context.state.rules.turns_left - context.test_state.rules.turns_left === 2
     end
   end
 
@@ -210,7 +210,7 @@ defmodule GameTest do
     end
 
     defp reduce_turns(context) do
-      rules = %Rules{context.state.rules | turns_left: 2}
+      rules = %Rules{context.state.rules | turns_left: 1}
       state = :sys.replace_state(context.game, fn _state -> %{context.state | rules: rules} end)
       %{game: context.game, test_state: state}
     end
