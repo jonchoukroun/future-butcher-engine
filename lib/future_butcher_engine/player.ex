@@ -3,26 +3,28 @@ defmodule FutureButcherEngine.Player do
   Player modules creates player, handles buying/selling of cuts and weapons, debt and health management, and muggings.
   """
 
-  alias FutureButcherEngine.{Cut, Player, Station, Weapon}
+  alias FutureButcherEngine.{Player, Station, Weapon}
 
-  @enforce_keys [:player_name, :cash, :debt, :health, :pack, :pack_space, :weapon]
+  @enforce_keys [:player_name, :cash, :debt, :has_oil, :health, :pack, :pack_space, :weapon]
   @derive {
     Jason.Encoder, only: [
-      :player_name, :cash, :debt, :health, :pack, :pack_space, :weapon
+      :player_name, :cash, :debt, :has_oil, :health, :pack, :pack_space, :weapon
     ]
   }
-  defstruct [:player_name, :cash, :debt, :health, :pack, :pack_space, :weapon]
+  defstruct [:player_name, :cash, :debt, :has_oil, :health, :pack, :pack_space, :weapon]
 
   @base_space 20
   @starter_loan 5000
   @full_health 100
   @cut_keys [:brains, :heart, :flank, :ribs, :liver]
   @weapon_type [:hedge_clippers, :katana, :box_cutter, :power_claw, :machete]
+  @oil_price 20_000
 
   @type player :: %Player{
     player_name: String.t,
     cash: integer,
     debt: integer,
+    has_oil: boolean,
     health: integer,
     pack: map,
     pack_space: integer,
@@ -42,6 +44,7 @@ defmodule FutureButcherEngine.Player do
       %FutureButcherEngine.Player{
         cash: 5000,
         debt: 5000,
+        has_oil: false,
         health: 100,
         pack: %{brains: 0, flank: 0, heart: 0, liver: 0, ribs: 0},
         pack_space: 20,
@@ -55,6 +58,7 @@ defmodule FutureButcherEngine.Player do
     %Player{
       cash: @starter_loan,
       debt: @starter_loan,
+      has_oil: false,
       health: @full_health,
       pack: initialize_pack(),
       pack_space: @base_space,
@@ -276,6 +280,37 @@ defmodule FutureButcherEngine.Player do
   @spec drop_weapon(player) :: {:ok, player} | {:error, atom}
   def drop_weapon(%Player{weapon: nil}), do: {:error, :no_weapon_owned}
   def drop_weapon(player), do: {:ok, player |> Map.replace!(:weapon, nil)}
+
+  # Adrenal Gland Essential Oil ------------------------------------------------
+
+  @doc """
+  Returns an updated Player struct with has_oil set to true. If the player can't
+  afford the oil, or is already holding oil, will return an erro.
+
+    ## Examples
+
+      iex > FutureButcherEngine.Player.buy_oil(%Player{has_oil: true, ...})
+      {:error, :already_has_oil}
+
+      iex > FutureButcherEngine.Player.buy_oil(%Player{cash: 19_999, ...})
+      {:error, :insufficient_funds}
+
+      iex > FutureButcherEngine.Player.buy_oil(%Player{cash: 30_000, has_oil: false, ...})
+      {:ok, %Player{cash: 10_000, has_oil: true, ...}}
+  """
+  @spec buy_oil(player) :: {:ok, player} | {:error, atom}
+  def buy_oil(%Player{has_oil: has_oil})
+    when has_oil === true, do: {:error, :already_has_oil}
+  def buy_oil(%Player{cash: cash})
+    when cash < @oil_price, do: {:error, :insufficient_funds}
+  def buy_oil(%Player{cash: cash} = player) do
+    {
+      :ok, %Player{player |
+        cash: cash - @oil_price,
+        has_oil: true
+      }
+    }
+  end
 
 
   # Muggings -------------------------------------------------------------------

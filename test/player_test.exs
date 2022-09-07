@@ -222,6 +222,30 @@ defmodule FutureButcherEngine.PlayerTest do
   end
 
 
+  # Adrenal Gland Essential Oil ------------------------------------------------
+
+  describe ".buy_oil" do
+    setup [:initialize_player]
+
+    test "returns error when already holding oil", context do
+      player = Map.replace(context.player, :has_oil, true)
+      assert Player.buy_oil(player) === {:error, :already_has_oil}
+    end
+
+    test "returns error when cash is too low", context do
+      player = Map.replace(context.player, :cash, 19_999)
+      assert Player.buy_oil(player) === {:error, :insufficient_funds}
+    end
+
+    test "updates player", context do
+      player = Map.replace(context.player, :cash, 30_000)
+      {:ok, %Player{cash: cash, has_oil: has_oil}} = Player.buy_oil(player)
+      assert has_oil === true
+      assert cash === 10_000
+    end
+  end
+
+
   # Muggings -------------------------------------------------------------------
 
   describe ".fight_mugger with no weapon" do
