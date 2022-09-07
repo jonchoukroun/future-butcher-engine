@@ -1,4 +1,5 @@
 defmodule FutureButcherEngine.Weapon do
+  alias FutureButcherEngine.Station
 
   @weapons %{
     :katana => %{:damage => 10, :min => 100_000, :max => 800_000},
@@ -11,6 +12,12 @@ defmodule FutureButcherEngine.Weapon do
   @weapons_list Map.keys(@weapons)
 
   def weapon_types, do: @weapons_list
+
+  def generate_price(_, turns_left)
+    when turns_left > 20, do: nil
+
+  def generate_price(_, turns_left)
+    when turns_left < 5, do: nil
 
   def generate_price(weapon, turns_left)
     when weapon in @weapons_list do

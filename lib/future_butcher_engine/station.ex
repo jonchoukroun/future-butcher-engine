@@ -38,10 +38,17 @@ defmodule FutureButcherEngine.Station do
 
   @station_names [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton, :bell_gardens]
 
+  @clinic_cost 50_000
+
+  @store_open_time 20
+  @store_close_time 5
+
   def station_names, do: @station_names
 
-  @clinic_cost 50_000
   def get_clinic_cost, do: @clinic_cost
+
+  def store_open, do: @store_open_time
+  def store_close, do: @store_close_time
 
   def get_base_crime_rate(:bell_gardens), do: {:error, :invalid_station}
 
@@ -56,7 +63,8 @@ defmodule FutureButcherEngine.Station do
   def get_max_adjustment(:bell_gardens), do: {:error, :invalid_station}
   def get_max_adjustment(station), do: @stations[station].max_adjustment
 
-  def new(:bell_gardens, turns_left) when turns_left > 20, do: {:error, :store_not_open}
+  def new(:bell_gardens, turns_left) when turns_left > @store_open_time, do: {:error, :store_not_open}
+  def new(:bell_gardnes, turns_left) when turns_left < @store_close_time, do: {:error, :store_not_open}
   def new(:bell_gardens, turns_left) do
     %Station{
       station_name: :bell_gardens,
@@ -120,7 +128,8 @@ defmodule FutureButcherEngine.Station do
 
   # Store ----------------------------------------------------------------------
 
-  def generate_store(turns_left) when turns_left > 20, do: %{}
+  def generate_store(turns_left) when turns_left > @store_open_time, do: %{}
+  def generate_store(turns_left) when turns_left > @store_close_time, do: %{}
 
   def generate_store(turns_left) do
     Enum.concat(generate_weapons_stock(turns_left), generate_packs_stock(turns_left))
