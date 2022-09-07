@@ -17,7 +17,7 @@ defmodule FutureButcherEngine.Player do
   @starter_loan 5000
   @full_health 100
   @cut_keys [:brains, :heart, :flank, :ribs, :liver]
-  @weapon_type [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
+  @weapon_type [:hedge_clippers, :katana, :box_cutter, :power_claw, :machete]
 
   @type player :: %Player{
     player_name: String.t,
