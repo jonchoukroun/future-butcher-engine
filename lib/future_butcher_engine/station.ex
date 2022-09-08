@@ -1,9 +1,9 @@
 defmodule FutureButcherEngine.Station do
   alias FutureButcherEngine.{Cut, Pack, Station, Weapon}
 
-  @enforce_keys [:station_name, :market, :store, :clinic_cost]
-  @derive {Jason.Encoder, only: [:station_name, :market, :store, :clinic_cost]}
-  defstruct [:station_name, :market, :store, :clinic_cost]
+  @enforce_keys [:station_name, :market, :store, :clinic_price, :oil_price]
+  @derive {Jason.Encoder, only: [:station_name, :market, :store, :clinic_price, :oil_price]}
+  defstruct [:station_name, :market, :store, :clinic_price, :oil_price]
 
   @stations %{
     :beverly_hills => %{
@@ -38,14 +38,17 @@ defmodule FutureButcherEngine.Station do
 
   @station_names [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton, :bell_gardens]
 
-  @clinic_cost 50_000
+  @clinic_price 50_000
+  @oil_price 20_000
 
   @store_open_time 20
   @store_close_time 5
 
   def station_names, do: @station_names
 
-  def get_clinic_cost, do: @clinic_cost
+  def get_clinic_price, do: @clinic_price
+
+  def get_oil_price, do: @oil_price
 
   def store_open, do: @store_open_time
   def store_close, do: @store_close_time
@@ -70,7 +73,8 @@ defmodule FutureButcherEngine.Station do
       station_name: :bell_gardens,
       store: generate_store(turns_left),
       market: nil,
-      clinic_cost: nil
+      clinic_price: nil,
+      oil_price: nil
     }
   end
 
@@ -79,7 +83,8 @@ defmodule FutureButcherEngine.Station do
       station_name: :venice_beach,
       market: nil,
       store: nil,
-      clinic_cost: @clinic_cost
+      clinic_price: @clinic_price,
+      oil_price: @oil_price
     }
   end
 
@@ -88,7 +93,8 @@ defmodule FutureButcherEngine.Station do
       station_name: station,
       market: generate_market(station),
       store: nil,
-      clinic_cost: nil
+      clinic_price: nil,
+      oil_price: nil
     }
   end
 
