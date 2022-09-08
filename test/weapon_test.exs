@@ -22,13 +22,13 @@ defmodule WeaponTest do
     end
 
     test "machete on first available turn" do
-      assert 60_000 === Weapon.generate_price(
+      assert 50_000 === Weapon.generate_price(
         :machete, Station.store_open()
       )
     end
 
     test "machete on last available turn" do
-      assert 480_000 === Weapon.generate_price(
+      assert 400_000 === Weapon.generate_price(
         :machete, Station.store_close()
       )
     end
@@ -46,25 +46,25 @@ defmodule WeaponTest do
     end
 
     test "hedge_clippers on first available turn" do
-      assert 20_000 === Weapon.generate_price(
+      assert 15_000 === Weapon.generate_price(
         :hedge_clippers, Station.store_open()
       )
     end
 
     test "hedge_clippers on last available turn" do
-      assert 160_000 === Weapon.generate_price(
+      assert 120_000 === Weapon.generate_price(
         :hedge_clippers, Station.store_close()
       )
     end
 
     test "box_cutter on first available turn" do
-      assert 15_000 === Weapon.generate_price(
+      assert 8_000 === Weapon.generate_price(
         :box_cutter, Station.store_open()
       )
     end
 
     test "box_cutter on last available turn" do
-      assert 120_000 === Weapon.generate_price(
+      assert 64_000 === Weapon.generate_price(
         :box_cutter, Station.store_close()
       )
     end
