@@ -18,7 +18,6 @@ defmodule FutureButcherEngine.Player do
   @full_health 100
   @cut_keys [:brains, :heart, :flank, :ribs, :liver]
   @weapon_type [:hedge_clippers, :katana, :box_cutter, :power_claw, :machete]
-  @oil_price 20_000
 
   @type player :: %Player{
     player_name: String.t,
@@ -96,9 +95,9 @@ defmodule FutureButcherEngine.Player do
   @spec restore_health(player) :: {:ok, player} | {:error, atom}
   def restore_health(%Player{health: health}) when health == 0, do: {:error, :dead_player}
   def restore_health(%Player{cash: cash} = player) do
-    case cash < Station.get_clinic_cost() do
+    case cash < Station.get_clinic_price() do
       true -> {:error, :insufficient_cash}
-      false -> {:ok, %Player{player | cash: cash - Station.get_clinic_cost(), health: @full_health}}
+      false -> {:ok, %Player{player | cash: cash - Station.get_clinic_price(), health: @full_health}}
     end
   end
 
@@ -301,15 +300,17 @@ defmodule FutureButcherEngine.Player do
   @spec buy_oil(player) :: {:ok, player} | {:error, atom}
   def buy_oil(%Player{has_oil: has_oil})
     when has_oil === true, do: {:error, :already_has_oil}
-  def buy_oil(%Player{cash: cash})
-    when cash < @oil_price, do: {:error, :insufficient_cash}
   def buy_oil(%Player{cash: cash} = player) do
-    {
-      :ok, %Player{player |
-        cash: cash - @oil_price,
-        has_oil: true
-      }
-    }
+    case cash >= Station.get_oil_price() do
+      true ->
+        {
+          :ok, %Player{player |
+            cash: cash - Station.get_oil_price(),
+            has_oil: true
+          }
+        }
+      false -> {:error, :insufficient_cash}
+    end
   end
 
 
@@ -358,7 +359,7 @@ defmodule FutureButcherEngine.Player do
   end
 
   def fight_mugger(%Player{weapon: nil} = player) do
-    if get_run_outcome() >= 8 do
+    if get_run_outcome() > 5 do
       {:ok, player, :victory}
     else
       {:ok, damaged_player} = Player.decrease_health(player, get_damage())
