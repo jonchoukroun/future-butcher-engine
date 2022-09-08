@@ -1,24 +1,24 @@
 defmodule FutureButcherEngine.Station do
   alias FutureButcherEngine.{Cut, Pack, Station, Weapon}
 
-  @enforce_keys [:station_name, :market, :store, :clinic_cost]
-  @derive {Jason.Encoder, only: [:station_name, :market, :store, :clinic_cost]}
-  defstruct [:station_name, :market, :store, :clinic_cost]
+  @enforce_keys [:station_name, :market, :store, :clinic_price, :oil_price]
+  @derive {Jason.Encoder, only: [:station_name, :market, :store, :clinic_price, :oil_price]}
+  defstruct [:station_name, :market, :store, :clinic_price, :oil_price]
 
   @stations %{
     :beverly_hills => %{
       :base_crime_rate => 1,
-      :travel_time     => 3,
+      :travel_time     => 2,
       :max_adjustment  => 0.5
       },
     :downtown => %{
       :base_crime_rate => 2,
-      :travel_time     => 2,
+      :travel_time     => 1,
       :max_adjustment  => 0.63
       },
     :venice_beach => %{
       :base_crime_rate => 3,
-      :travel_time     => 2,
+      :travel_time     => 1,
       :max_adjustment  => 0.75
       },
     :hollywood => %{
@@ -38,10 +38,20 @@ defmodule FutureButcherEngine.Station do
 
   @station_names [:beverly_hills, :downtown, :venice_beach, :hollywood, :compton, :bell_gardens]
 
+  @clinic_price 50_000
+  @oil_price 20_000
+
+  @store_open_time 20
+  @store_close_time 5
+
   def station_names, do: @station_names
 
-  @clinic_cost 50_000
-  def get_clinic_cost, do: @clinic_cost
+  def get_clinic_price, do: @clinic_price
+
+  def get_oil_price, do: @oil_price
+
+  def store_open, do: @store_open_time
+  def store_close, do: @store_close_time
 
   def get_base_crime_rate(:bell_gardens), do: {:error, :invalid_station}
 
@@ -56,13 +66,15 @@ defmodule FutureButcherEngine.Station do
   def get_max_adjustment(:bell_gardens), do: {:error, :invalid_station}
   def get_max_adjustment(station), do: @stations[station].max_adjustment
 
-  def new(:bell_gardens, turns_left) when turns_left > 20, do: {:error, :store_not_open}
+  def new(:bell_gardens, turns_left) when turns_left > @store_open_time, do: {:error, :store_not_open}
+  def new(:bell_gardnes, turns_left) when turns_left < @store_close_time, do: {:error, :store_not_open}
   def new(:bell_gardens, turns_left) do
     %Station{
       station_name: :bell_gardens,
       store: generate_store(turns_left),
       market: nil,
-      clinic_cost: nil
+      clinic_price: nil,
+      oil_price: nil
     }
   end
 
@@ -71,7 +83,8 @@ defmodule FutureButcherEngine.Station do
       station_name: :venice_beach,
       market: nil,
       store: nil,
-      clinic_cost: @clinic_cost
+      clinic_price: @clinic_price,
+      oil_price: @oil_price
     }
   end
 
@@ -80,7 +93,8 @@ defmodule FutureButcherEngine.Station do
       station_name: station,
       market: generate_market(station),
       store: nil,
-      clinic_cost: nil
+      clinic_price: nil,
+      oil_price: nil
     }
   end
 
@@ -91,7 +105,7 @@ defmodule FutureButcherEngine.Station do
 
   def random_encounter(_pack_space, _turns_left, :bell_gardens), do: {:ok, :end_transit}
 
-  def random_encounter(_pack_space, turns_left, _station) when turns_left > 22 do
+  def random_encounter(_pack_space, turns_left, _station) when turns_left > 20 do
     {:ok, :end_transit}
   end
 
@@ -120,7 +134,8 @@ defmodule FutureButcherEngine.Station do
 
   # Store ----------------------------------------------------------------------
 
-  def generate_store(turns_left) when turns_left > 20, do: %{}
+  def generate_store(turns_left) when turns_left > @store_open_time, do: %{}
+  def generate_store(turns_left) when turns_left < @store_close_time, do: %{}
 
   def generate_store(turns_left) do
     Enum.concat(generate_weapons_stock(turns_left), generate_packs_stock(turns_left))
@@ -131,8 +146,7 @@ defmodule FutureButcherEngine.Station do
     Weapon.weapon_types
     |> Enum.map(fn weapon -> {weapon, %{
         price: Weapon.generate_price(weapon, turns_left),
-        damage: Weapon.get_damage(weapon),
-        can_harvest: Weapon.can_harvest(weapon)
+        damage: Weapon.get_damage(weapon)
         }} end)
   end
 
@@ -172,7 +186,9 @@ defmodule FutureButcherEngine.Station do
   defp get_min(:beverly_hills), do: 0
 
   defp get_max(cut, station) do
-    round(Cut.maximum_quantity(cut) * get_max_adjustment(station))
+    Cut.maximum_quantity(cut)
+    |> Kernel.*(get_max_adjustment(station))
+    |> round()
   end
 
   defp get_price(quantity, cut) do

@@ -3,26 +3,27 @@ defmodule FutureButcherEngine.Player do
   Player modules creates player, handles buying/selling of cuts and weapons, debt and health management, and muggings.
   """
 
-  alias FutureButcherEngine.{Cut, Player, Station, Weapon}
+  alias FutureButcherEngine.{Player, Station, Weapon}
 
-  @enforce_keys [:player_name, :cash, :debt, :health, :pack, :pack_space, :weapon]
+  @enforce_keys [:player_name, :cash, :debt, :has_oil, :health, :pack, :pack_space, :weapon]
   @derive {
     Jason.Encoder, only: [
-      :player_name, :cash, :debt, :health, :pack, :pack_space, :weapon
+      :player_name, :cash, :debt, :has_oil, :health, :pack, :pack_space, :weapon
     ]
   }
-  defstruct [:player_name, :cash, :debt, :health, :pack, :pack_space, :weapon]
+  defstruct [:player_name, :cash, :debt, :has_oil, :health, :pack, :pack_space, :weapon]
 
   @base_space 20
   @starter_loan 5000
   @full_health 100
   @cut_keys [:brains, :heart, :flank, :ribs, :liver]
-  @weapon_type [:hedge_clippers, :hockey_stick, :box_cutter, :brass_knuckles, :machete]
+  @weapon_type [:hedge_clippers, :katana, :box_cutter, :power_claw, :machete]
 
   @type player :: %Player{
     player_name: String.t,
     cash: integer,
     debt: integer,
+    has_oil: boolean,
     health: integer,
     pack: map,
     pack_space: integer,
@@ -42,6 +43,7 @@ defmodule FutureButcherEngine.Player do
       %FutureButcherEngine.Player{
         cash: 5000,
         debt: 5000,
+        has_oil: false,
         health: 100,
         pack: %{brains: 0, flank: 0, heart: 0, liver: 0, ribs: 0},
         pack_space: 20,
@@ -55,6 +57,7 @@ defmodule FutureButcherEngine.Player do
     %Player{
       cash: @starter_loan,
       debt: @starter_loan,
+      has_oil: false,
       health: @full_health,
       pack: initialize_pack(),
       pack_space: @base_space,
@@ -92,9 +95,9 @@ defmodule FutureButcherEngine.Player do
   @spec restore_health(player) :: {:ok, player} | {:error, atom}
   def restore_health(%Player{health: health}) when health == 0, do: {:error, :dead_player}
   def restore_health(%Player{cash: cash} = player) do
-    case cash < Station.get_clinic_cost() do
-      true -> {:error, :insufficient_funds}
-      false -> {:ok, %Player{player | cash: cash - Station.get_clinic_cost(), health: @full_health}}
+    case cash < Station.get_clinic_price() do
+      true -> {:error, :insufficient_cash}
+      false -> {:ok, %Player{player | cash: cash - Station.get_clinic_price(), health: @full_health}}
     end
   end
 
@@ -277,18 +280,72 @@ defmodule FutureButcherEngine.Player do
   def drop_weapon(%Player{weapon: nil}), do: {:error, :no_weapon_owned}
   def drop_weapon(player), do: {:ok, player |> Map.replace!(:weapon, nil)}
 
+  # Adrenal Gland Essential Oil ------------------------------------------------
+
+  @doc """
+  Returns an updated Player struct with has_oil set to true. If the player can't
+  afford the oil, or is already holding oil, will return an erro.
+
+    ## Examples
+
+      iex > FutureButcherEngine.Player.buy_oil(%Player{has_oil: true, ...})
+      {:error, :already_has_oil}
+
+      iex > FutureButcherEngine.Player.buy_oil(%Player{cash: 19_999, ...})
+      {:error, :insufficient_cash}
+
+      iex > FutureButcherEngine.Player.buy_oil(%Player{cash: 30_000, has_oil: false, ...})
+      {:ok, %Player{cash: 10_000, has_oil: true, ...}}
+  """
+  @spec buy_oil(player) :: {:ok, player} | {:error, atom}
+  def buy_oil(%Player{has_oil: has_oil})
+    when has_oil === true, do: {:error, :already_has_oil}
+  def buy_oil(%Player{cash: cash} = player) do
+    case cash >= Station.get_oil_price() do
+      true ->
+        {
+          :ok, %Player{player |
+            cash: cash - Station.get_oil_price(),
+            has_oil: true
+          }
+        }
+      false -> {:error, :insufficient_cash}
+    end
+  end
+
+
+  @doc """
+  Returns an updated Player struct with has_oil set to false. If the player has
+  no oil, it is a no-op.
+
+    ## Examples
+
+      iex > FutureButcherEngine.Player.use_oil(%Player{has_oil: false, ...})
+      {:ok, %Player{has_oil: false, ...}}
+
+      iex > FutureButcherEngine.Player.use_oil(%Player{has_oil: true, ...})
+      {:ok, %Player{has_oil: false, ...}}
+  """
+  @spec use_oil(player):: {:ok, player}
+  def use_oil(player), do: {:ok, %Player{player | has_oil: false}}
+
 
   # Muggings -------------------------------------------------------------------
 
   @doc """
   Returns an updated Player struct adjusted on the outcome of the fight. When
-  the player has no weapon, they have a 20% chance of successfully running. If the
-  player's health drops to 0 or below, will return a game-ending outcome.
+  the player has no weapon, they have a 50% chance of successfully running. Each
+  weapon increases the chance of winning the fight. If the player has essential
+  oil, their chance of successfully running is 100%. If the player's health drops
+  to 0 or below, will return a game-ending outcome.
 
     ## Examples
 
         iex > FutureButcherEngine.Player.fight_mugger(%Player{weapon: nil, ...})
         {:ok, %FutureButcherEngine.Player{...}, :defeat}
+
+        iex > FutureButcherEngine.Player.fight_mugger(%Player{weapon: nil, has_oil: true ...})
+        {:ok, %FutureButcherEngine.Player{...}, :victory}
 
         iex > FutureButcherEngine.Player.fight_mugger(%Player{pack: %{heart: 1, ...}, weapon: :machete, ...})
         {:ok, %FutureButcherEngine.Player{pack: %{heart: 2}}, :victory}
@@ -297,8 +354,12 @@ defmodule FutureButcherEngine.Player do
         {:ok, %FutureButcherEngine.Player{health: -10}, :death}
   """
   @spec fight_mugger(player) :: {:ok, player, outcome :: atom}
+  def fight_mugger(%Player{weapon: nil, has_oil: true} = player) do
+    {:ok, %Player{player | has_oil: false}, :victory}
+  end
+
   def fight_mugger(%Player{weapon: nil} = player) do
-    if get_run_outcome() >= 8 do
+    if get_run_outcome() > 5 do
       {:ok, player, :victory}
     else
       {:ok, damaged_player} = Player.decrease_health(player, get_damage())

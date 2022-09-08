@@ -73,7 +73,11 @@ defmodule FutureButcherEngine.Game do
   end
 
 
-  # Health ----------------------------------------------------------------------
+  # Clinic ---------------------------------------------------------------------
+
+  def buy_oil(game) do
+    GenServer.call(game, {:buy_oil})
+  end
 
   def restore_health(game) do
     GenServer.call(game, {:restore_health})
@@ -149,6 +153,18 @@ defmodule FutureButcherEngine.Game do
 
 
   # Heath clinic --------------------------------------------------------------
+
+  def handle_call({:buy_oil}, _from, state_data) do
+    with {:ok, rules} <- Rules.check(state_data.rules, :buy_oil),
+      {:ok, player} <- Player.buy_oil(state_data.player) do
+        state_data
+        |> update_rules(rules)
+        |> update_player(player)
+        |> reply_success(:ok)
+      else
+        {:error, msg} -> reply_failure(state_data, msg)
+      end
+  end
 
   def handle_call({:restore_health}, _from, state_data) do
     with {:ok, rules} <- Rules.check(state_data.rules, :restore_health),
@@ -360,7 +376,7 @@ defmodule FutureButcherEngine.Game do
   # Computations ===============================================================
 
   defp generate_turns_penalty(turns_left, :defeat) do
-    {:ok, Enum.random(1..Enum.min([turns_left, 3]))}
+    {:ok, Enum.random(1..Enum.min([turns_left, 2]))}
   end
   defp generate_turns_penalty(_, _), do: {:ok, 0}
 
