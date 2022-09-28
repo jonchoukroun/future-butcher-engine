@@ -16,6 +16,7 @@ defmodule FutureButcherEngine.Player do
   @base_space 20
   @starter_loan 5000
   @full_health 100
+  @loan_rate 0.15
   @cut_keys [:brains, :heart, :flank, :ribs, :liver]
   @weapon_type [:hedge_clippers, :katana, :box_cutter, :power_claw, :machete]
 
@@ -146,7 +147,7 @@ defmodule FutureButcherEngine.Player do
   """
   @spec accrue_debt(player, turns :: integer) :: {:ok, player} | {:error, atom}
   def accrue_debt(%Player{debt: debt} = player, turns) when debt > 0 do
-    accrued_debt = debt * :math.pow(1.05, turns) |> round()
+    accrued_debt = debt * :math.pow((1 + @loan_rate), turns) |> round()
     {:ok, %Player{player | debt: accrued_debt}}
   end
 
