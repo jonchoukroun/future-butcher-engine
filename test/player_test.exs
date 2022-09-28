@@ -79,14 +79,14 @@ defmodule FutureButcherEngine.PlayerTest do
     end
 
     test "with debt raises debt by interest rate amount", context do
-      expected_debt = context.player.debt * 1.05 |> round()
+      expected_debt = context.player.debt * 1.15 |> round()
       {:ok, test_player} = Player.accrue_debt(context.player, 1)
       assert test_player.debt === expected_debt
     end
 
     test "with multiple turns accrues debt concurrently", context do
       turns = 5
-      expected_debt = context.player.debt * :math.pow(1.05, turns) |> round()
+      expected_debt = context.player.debt * :math.pow(1.15, turns) |> round()
       {:ok, test_player} = Player.accrue_debt(context.player, turns)
       assert test_player.debt === expected_debt
     end

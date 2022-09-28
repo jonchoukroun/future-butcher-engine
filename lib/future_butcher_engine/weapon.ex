@@ -2,11 +2,11 @@ defmodule FutureButcherEngine.Weapon do
   alias FutureButcherEngine.Station
 
   @weapons %{
-    :katana => %{:damage => 10, :min => 100_000, :max => 800_000},
-    :machete => %{:damage => 9, :min => 50_000, :max => 400_000},
-    :power_claw => %{:damage => 8, :min => 30_000, :max => 240_000},
-    :hedge_clippers => %{:damage => 7, :min => 15_000, :max => 120_000},
-    :box_cutter => %{:damage => 6, :min => 8_000, :max => 64_000},
+    :katana => %{:damage => 10, :min => 60_000, :max => 640_000},
+    :machete => %{:damage => 9, :min => 30_000, :max => 320_000},
+    :power_claw => %{:damage => 8, :min => 18_000, :max => 190_000},
+    :hedge_clippers => %{:damage => 7, :min => 12_000, :max => 90_000},
+    :box_cutter => %{:damage => 6, :min => 6_000, :max => 40_000},
   }
 
   @weapons_list Map.keys(@weapons)
